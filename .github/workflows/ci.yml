@@ -36,6 +36,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @coopenomics/coopos-ship-reader build
       - run: pnpm --filter @coopenomics/parser typecheck
 
   unit:
@@ -49,6 +50,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @coopenomics/coopos-ship-reader build
       - run: pnpm --filter @coopenomics/parser test:unit -- --reporter=verbose --coverage
       - uses: codecov/codecov-action@v4
         with:
@@ -71,6 +73,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @coopenomics/coopos-ship-reader build
       - run: pnpm --filter @coopenomics/parser test:integration
         env:
           REDIS_URL: redis://localhost:6379
