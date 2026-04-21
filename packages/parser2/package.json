@@ -1,12 +1,12 @@
 {
-  "name": "@coopenomics/parser2",
+  "name": "@coopenomics/parser",
   "version": "0.1.0",
-  "description": "Universal EOSIO/Antelope SHiP-to-Redis blockchain indexer",
+  "description": "Universal EOSIO/Antelope SHiP-to-Redis blockchain indexer (parser)",
   "license": "MIT",
   "author": "Coopenomics contributors",
   "repository": {
     "type": "git",
-    "url": "https://github.com/coopenomics/parser2"
+    "url": "https://github.com/coopenomics/parser"
   },
   "type": "module",
   "exports": {

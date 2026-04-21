@@ -6,7 +6,7 @@ const program = new Command()
 
 program
   .name('parser')
-  .description('@coopenomics/parser2 — universal EOSIO/Antelope blockchain indexer')
+  .description('@coopenomics/parser — universal EOSIO/Antelope blockchain indexer')
   .version('0.1.0')
 
 program
