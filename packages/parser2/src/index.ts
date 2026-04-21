@@ -17,7 +17,7 @@ export type {
   LockState,
   SubscriptionLockOptions,
 } from './client/index.js'
-export type { StreamMessage } from './ports/RedisStore.js'
+export type { StreamMessage, XGroupInfo } from './ports/RedisStore.js'
 export { BlockProcessor } from './core/BlockProcessor.js'
 export { XtrimSupervisor } from './core/XtrimSupervisor.js'
 export { WorkerPool } from './workers/WorkerPool.js'

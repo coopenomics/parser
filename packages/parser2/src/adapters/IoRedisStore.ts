@@ -1,5 +1,5 @@
 import type { RedisOptions } from 'ioredis'
-import type { RedisStore, StreamMessage } from '../ports/RedisStore.js'
+import type { RedisStore, StreamMessage, XGroupInfo } from '../ports/RedisStore.js'
 
 type RedisConstructor = new (url: string, opts?: RedisOptions) => IRedisClient
 interface IRedisClient {
@@ -7,24 +7,31 @@ interface IRedisClient {
   xadd(stream: string, id: string, ...args: string[]): Promise<string | null>
   xtrim(stream: string, strategy: string, threshold: string): Promise<number>
   xgroup(action: string, stream: string, group: string, id: string, mkstream?: string): Promise<unknown>
+  xinfo(subcommand: string, key: string): Promise<unknown>
   xreadgroup(
     group: string, groupName: string, consumer: string, consumerName: string,
     count: string, countVal: number,
     block: string, blockMs: number,
     streams: string, stream: string, id: string,
   ): Promise<Array<[string, Array<[string, string[]]>]> | null>
+  xrange(key: string, start: string, end: string, count: string, countVal: number): Promise<Array<[string, string[]]>>
+  xrevrange(key: string, end: string, start: string, count: string, countVal: number): Promise<Array<[string, string[]]>>
   xack(stream: string, group: string, id: string): Promise<number>
-  xinfoGroups(stream: string): Promise<unknown[]>
   zadd(key: string, score: number, member: string): Promise<number>
   zrangebyscore(key: string, min: string, max: string, limit: string, offset: number, count: number): Promise<string[]>
   zrevrangebyscore(key: string, max: string, min: string, limit: string, offset: number, count: number): Promise<string[]>
+  zcount(key: string, min: string, max: string): Promise<number>
+  zremrangebyscore(key: string, min: string, max: string): Promise<number>
+  zcard(key: string): Promise<number>
   hset(key: string, ...args: string[]): Promise<number>
   hget(key: string, field: string): Promise<string | null>
+  hgetall(key: string): Promise<Record<string, string> | null>
   hincrby(key: string, field: string, increment: number): Promise<number>
   hdel(key: string, ...fields: string[]): Promise<number>
   set(key: string, value: string, nx: string, px: string, ms: number): Promise<string | null>
   eval(script: string, numkeys: number, ...args: string[]): Promise<unknown>
   expire(key: string, seconds: number): Promise<number>
+  scan(cursor: string, match: string, pattern: string, count: string, countVal: number): Promise<[string, string[]]>
   quit(): Promise<string>
 }
 
@@ -47,6 +54,37 @@ if current == ARGV[1] then
 end
 return 0
 `
+
+function parseStreamEntries(raw: Array<[string, string[]]>): StreamMessage[] {
+  const messages: StreamMessage[] = []
+  for (const [msgId, rawFields] of raw) {
+    const fields: Record<string, string> = {}
+    for (let i = 0; i + 1 < rawFields.length; i += 2) {
+      fields[rawFields[i] ?? ''] = rawFields[i + 1] ?? ''
+    }
+    messages.push({ id: msgId, fields })
+  }
+  return messages
+}
+
+function parseXGroupInfo(raw: unknown): XGroupInfo {
+  let obj: Record<string, unknown>
+  if (Array.isArray(raw)) {
+    obj = {}
+    for (let i = 0; i + 1 < raw.length; i += 2) {
+      obj[raw[i] as string] = raw[i + 1]
+    }
+  } else {
+    obj = raw as Record<string, unknown>
+  }
+  return {
+    name: String(obj['name'] ?? ''),
+    pending: Number(obj['pending'] ?? 0),
+    lastDeliveredId: String(obj['last-delivered-id'] ?? '0-0'),
+    lag: obj['lag'] != null ? Number(obj['lag']) : null,
+    consumers: Number(obj['consumers'] ?? 0),
+  }
+}
 
 export class IoRedisStore implements RedisStore {
   readonly client: IRedisClient
@@ -81,10 +119,18 @@ export class IoRedisStore implements RedisStore {
     try {
       await this.client.xgroup('CREATE', stream, group, startId, 'MKSTREAM')
     } catch (err) {
-      // BUSYGROUP = group already exists — idempotent
       if (err instanceof Error && err.message.includes('BUSYGROUP')) return
       throw err
     }
+  }
+
+  async xgroupSetId(stream: string, group: string, id: string): Promise<void> {
+    await this.client.xgroup('SETID', stream, group, id)
+  }
+
+  async xinfoGroups(stream: string): Promise<XGroupInfo[]> {
+    const raw = await this.client.xinfo('GROUPS', stream) as unknown[]
+    return (raw ?? []).map(parseXGroupInfo)
   }
 
   async xreadGroup(
@@ -104,15 +150,19 @@ export class IoRedisStore implements RedisStore {
     if (!result) return []
     const messages: StreamMessage[] = []
     for (const [, entries] of result) {
-      for (const [msgId, rawFields] of entries) {
-        const fields: Record<string, string> = {}
-        for (let i = 0; i + 1 < rawFields.length; i += 2) {
-          fields[rawFields[i] ?? ''] = rawFields[i + 1] ?? ''
-        }
-        messages.push({ id: msgId, fields })
-      }
+      messages.push(...parseStreamEntries(entries))
     }
     return messages
+  }
+
+  async xrange(stream: string, start: string, end: string, count: number): Promise<StreamMessage[]> {
+    const raw = await this.client.xrange(stream, start, end, 'COUNT', count)
+    return parseStreamEntries(raw)
+  }
+
+  async xrevrange(stream: string, end: string, start: string, count: number): Promise<StreamMessage[]> {
+    const raw = await this.client.xrevrange(stream, end, start, 'COUNT', count)
+    return parseStreamEntries(raw)
   }
 
   async xack(stream: string, group: string, id: string): Promise<void> {
@@ -127,6 +177,22 @@ export class IoRedisStore implements RedisStore {
     return this.client.zrevrangebyscore(key, max, min, 'LIMIT', 0, 1)
   }
 
+  async zrangeByScore(key: string, min: string, max: string): Promise<string[]> {
+    return this.client.zrangebyscore(key, min, max, 'LIMIT', 0, 9_999_999)
+  }
+
+  async zcount(key: string, min: string, max: string): Promise<number> {
+    return this.client.zcount(key, min, max)
+  }
+
+  async zremRangeByScore(key: string, min: string, max: string): Promise<number> {
+    return this.client.zremrangebyscore(key, min, max)
+  }
+
+  async zcard(key: string): Promise<number> {
+    return this.client.zcard(key)
+  }
+
   async hset(key: string, fields: Record<string, string>): Promise<void> {
     const args: string[] = []
     for (const [k, v] of Object.entries(fields)) args.push(k, v)
@@ -135,6 +201,11 @@ export class IoRedisStore implements RedisStore {
 
   async hget(key: string, field: string): Promise<string | null> {
     return this.client.hget(key, field)
+  }
+
+  async hgetAll(key: string): Promise<Record<string, string>> {
+    const result = await this.client.hgetall(key)
+    return result ?? {}
   }
 
   async hincrby(key: string, field: string, increment: number): Promise<number> {
@@ -162,6 +233,17 @@ export class IoRedisStore implements RedisStore {
 
   async expire(key: string, seconds: number): Promise<void> {
     await this.client.expire(key, seconds)
+  }
+
+  async scan(pattern: string, count = 100): Promise<string[]> {
+    const keys: string[] = []
+    let cursor = '0'
+    do {
+      const [nextCursor, batch] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', count)
+      keys.push(...batch)
+      cursor = nextCursor
+    } while (cursor !== '0')
+    return keys
   }
 
   async quit(): Promise<void> {

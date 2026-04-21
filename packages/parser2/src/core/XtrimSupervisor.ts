@@ -1,25 +1,14 @@
 import type { RedisStore } from '../ports/RedisStore.js'
 
-interface GroupInfo {
-  'last-delivered-id': string
-  'pel-count': number
-}
-
-export interface IoRedisClientLike extends RedisStore {
-  client: {
-    xinfoGroups(key: string): Promise<GroupInfo[]>
-  }
-}
-
 export interface XtrimSupervisorOpts {
-  redis: IoRedisClientLike
+  redis: RedisStore
   stream: string
   intervalMs?: number
 }
 
 export class XtrimSupervisor {
   private timer: ReturnType<typeof setInterval> | null = null
-  private readonly redis: IoRedisClientLike
+  private readonly redis: RedisStore
   private readonly stream: string
   private readonly intervalMs: number
 
@@ -46,14 +35,14 @@ export class XtrimSupervisor {
 
   private async trim(): Promise<void> {
     try {
-      const groups = await this.redis.client.xinfoGroups(this.stream)
+      const groups = await this.redis.xinfoGroups(this.stream)
       if (!groups || groups.length === 0) return
 
-      const pendingGroups = groups.filter(g => g['pel-count'] > 0)
+      const pendingGroups = groups.filter(g => g.pending > 0)
       if (pendingGroups.length === 0) return
 
       const minId = pendingGroups
-        .map(g => g['last-delivered-id'])
+        .map(g => g.lastDeliveredId)
         .reduce((a, b) => (a < b ? a : b))
 
       if (minId) await this.redis.xtrim(this.stream, minId)

@@ -4,7 +4,7 @@ import { ShipReaderAdapter } from '../adapters/ShipReaderAdapter.js'
 import { IoRedisStore } from '../adapters/IoRedisStore.js'
 import { WorkerPool } from '../workers/WorkerPool.js'
 import { BlockProcessor } from './BlockProcessor.js'
-import type { XtrimSupervisorOpts, IoRedisClientLike } from './XtrimSupervisor.js'
+import type { XtrimSupervisorOpts } from './XtrimSupervisor.js'
 import { XtrimSupervisor } from './XtrimSupervisor.js'
 import { RedisKeys } from '../redis/keys.js'
 import { ChainIdMismatchError } from '../errors.js'
@@ -88,7 +88,7 @@ export class Parser {
         : []
 
     const xtrimOpts: XtrimSupervisorOpts = {
-      redis: this.redis as IoRedisClientLike,
+      redis: this.redis,
       stream: eventsStream,
     }
     if (this.opts.xtrim?.intervalMs !== undefined) xtrimOpts.intervalMs = this.opts.xtrim.intervalMs

@@ -1,6 +1,10 @@
 import { Command } from 'commander'
 import { fromConfigFile } from '../config/index.js'
+import { IoRedisStore } from '../adapters/IoRedisStore.js'
 import { ConfigValidationError, ConfigSecurityError } from '../errors.js'
+import { listSubscriptions } from './commands/listSubscriptions.js'
+import { resetSubscription } from './commands/resetSubscription.js'
+import { abiPrune } from './commands/abiPrune.js'
 
 const program = new Command()
 
@@ -60,6 +64,80 @@ program
         console.error(String(err))
       }
       process.exit(1)
+    }
+  })
+
+program
+  .command('list-subscriptions')
+  .description('List registered subscriptions with consumer group stats')
+  .requiredOption('--config <file>', 'Config file path')
+  .option('--chain-id <id>', 'Override chain ID from config')
+  .option('--json', 'Output as JSON')
+  .action(async (opts: { config: string; chainId?: string; json?: boolean }) => {
+    let redis: IoRedisStore | null = null
+    try {
+      const config = fromConfigFile(opts.config)
+      const chainId = opts.chainId ?? config.chain?.id ?? 'default'
+      redis = new IoRedisStore(config.redis)
+      await redis.connect()
+      await listSubscriptions(redis, chainId, opts.json ?? false)
+      process.exit(0)
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err))
+      process.exit(1)
+    } finally {
+      await redis?.quit()
+    }
+  })
+
+program
+  .command('reset-subscription')
+  .description('Rewind a subscription consumer group to a specific block')
+  .requiredOption('--config <file>', 'Config file path')
+  .requiredOption('--sub-id <id>', 'Subscription ID to reset')
+  .requiredOption('--to-block <n>', 'Target block number (0 or "latest" = skip to end)')
+  .option('--chain-id <id>', 'Override chain ID from config')
+  .option('--dry-run', 'Show what would be done without executing')
+  .action(async (opts: { config: string; subId: string; toBlock: string; chainId?: string; dryRun?: boolean }) => {
+    let redis: IoRedisStore | null = null
+    try {
+      const config = fromConfigFile(opts.config)
+      const chainId = opts.chainId ?? config.chain?.id ?? 'default'
+      redis = new IoRedisStore(config.redis)
+      await redis.connect()
+      await resetSubscription(redis, chainId, opts.subId, opts.toBlock, opts.dryRun ?? false)
+      process.exit(0)
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err))
+      process.exit(1)
+    } finally {
+      await redis?.quit()
+    }
+  })
+
+program
+  .command('abi-prune')
+  .description('Prune old ABI versions from a contract ZSET')
+  .requiredOption('--config <file>', 'Config file path')
+  .option('--contract <name>', 'Contract name to prune')
+  .option('--older-than <block>', 'Remove versions older than this block number')
+  .option('--dry-run', 'Show what would be done without executing')
+  .option('--all-contracts', 'Apply prune to all contracts with ABI history')
+  .action(async (opts: { config: string; contract?: string; olderThan?: string; dryRun?: boolean; allContracts?: boolean }) => {
+    let redis: IoRedisStore | null = null
+    try {
+      const config = fromConfigFile(opts.config)
+      redis = new IoRedisStore(config.redis)
+      await redis.connect()
+      const olderThan = opts.olderThan !== undefined ? Number(opts.olderThan) : 0
+      if (isNaN(olderThan)) throw new Error(`Invalid --older-than value: ${opts.olderThan}`)
+      await abiPrune(redis, opts.contract ?? null, olderThan, opts.dryRun ?? false, opts.allContracts ?? false)
+      process.exit(0)
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err))
+      process.exit(1)
+    } finally {
+      await redis?.quit()
     }
   })
 
