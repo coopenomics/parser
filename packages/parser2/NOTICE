@@ -1,0 +1,17 @@
+@coopenomics/parser2
+Copyright (c) 2024 Coopenomics contributors
+
+This software is licensed under the MIT License.
+
+Third-party attributions:
+
+1. Controller patterns for subscription recovery (recoverOwnPending, standby/active model):
+   Re-implemented from scratch based on observed patterns in Coopenomics codebase.
+   Original concept: blockchain-consumer.service.ts (Coopenomics internal).
+
+2. Redis subscription lock design (SET NX PX + heartbeat PEXPIRE + LUA-guarded release):
+   New design, not ported from any upstream source.
+
+3. SHiP protocol specification:
+   AntelopeIO/Leap (Apache-2.0) — reference implementation.
+   https://github.com/AntelopeIO/leap

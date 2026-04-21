@@ -1,0 +1,55 @@
+{
+  "name": "@coopenomics/parser2",
+  "version": "0.1.0",
+  "description": "Universal EOSIO/Antelope SHiP-to-Redis blockchain indexer",
+  "license": "MIT",
+  "author": "Coopenomics contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/coopenomics/parser2"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "parser": "./dist/cli/index.cjs"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration"
+  },
+  "dependencies": {
+    "@coopenomics/coopos-ship-reader": "workspace:*",
+    "@wharfkit/antelope": "^1.2.0",
+    "ajv": "^8.17.1",
+    "commander": "^12.1.0",
+    "ioredis": "^5.4.1",
+    "p-queue": "^8.0.1",
+    "pino": "^9.2.0",
+    "piscina": "^4.6.1",
+    "prom-client": "^15.1.3",
+    "yaml": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
