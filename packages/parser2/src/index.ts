@@ -35,4 +35,7 @@ export {
   ConfigSecurityError,
   ChainIdMismatchError,
   NotImplementedError,
+  AbiNotFoundError,
 } from './errors.js'
+export { AbiStore } from './abi/AbiStore.js'
+export { AbiBootstrapper } from './abi/AbiBootstrapper.js'

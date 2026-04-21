@@ -17,6 +17,7 @@ interface IRedisClient {
   xinfoGroups(stream: string): Promise<unknown[]>
   zadd(key: string, score: number, member: string): Promise<number>
   zrangebyscore(key: string, min: string, max: string, limit: string, offset: number, count: number): Promise<string[]>
+  zrevrangebyscore(key: string, max: string, min: string, limit: string, offset: number, count: number): Promise<string[]>
   hset(key: string, ...args: string[]): Promise<number>
   hget(key: string, field: string): Promise<string | null>
   hincrby(key: string, field: string, increment: number): Promise<number>
@@ -123,7 +124,7 @@ export class IoRedisStore implements RedisStore {
   }
 
   async zrangeByscoreRev(key: string, max: string, min: string): Promise<string[]> {
-    return this.client.zrangebyscore(key, min, max, 'LIMIT', 0, 1)
+    return this.client.zrevrangebyscore(key, max, min, 'LIMIT', 0, 1)
   }
 
   async hset(key: string, fields: Record<string, string>): Promise<void> {

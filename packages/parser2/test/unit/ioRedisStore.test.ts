@@ -7,6 +7,7 @@ vi.mock('ioredis', () => {
     xtrim: vi.fn().mockResolvedValue(5),
     zadd: vi.fn().mockResolvedValue(1),
     zrangebyscore: vi.fn().mockResolvedValue(['{"version":"eosio::abi/1.0"}']),
+    zrevrangebyscore: vi.fn().mockResolvedValue(['{"version":"eosio::abi/1.0"}']),
     hset: vi.fn().mockResolvedValue(2),
     hget: vi.fn().mockResolvedValue('100'),
     set: vi.fn().mockResolvedValue('OK'),
@@ -41,10 +42,10 @@ describe('IoRedisStore', () => {
     expect(store.client.zadd).toHaveBeenCalledWith('parser2:abi:eosio', 100, '{"version":"eosio::abi/1.0"}')
   })
 
-  it('zrangeByscoreRev calls redis.zrangebyscore with LIMIT 0 1', async () => {
-    const result = await store.zrangeByscoreRev('parser2:abi:eosio', '+inf', '0')
+  it('zrangeByscoreRev calls redis.zrevrangebyscore with max first, then min', async () => {
+    const result = await store.zrangeByscoreRev('parser2:abi:eosio', '250', '-inf')
     expect(result).toHaveLength(1)
-    expect(store.client.zrangebyscore).toHaveBeenCalledWith('parser2:abi:eosio', '0', '+inf', 'LIMIT', 0, 1)
+    expect(store.client.zrevrangebyscore).toHaveBeenCalledWith('parser2:abi:eosio', '250', '-inf', 'LIMIT', 0, 1)
   })
 
   it('hset calls redis.hset with flattened args', async () => {

@@ -27,3 +27,10 @@ export class ChainIdMismatchError extends Error {
     this.name = 'ChainIdMismatchError'
   }
 }
+
+export class AbiNotFoundError extends Error {
+  constructor(contract: string, blockNum: number, abiFallback: string) {
+    super(`ABI for ${contract} not found at block ${blockNum}, abiFallback=${abiFallback}`)
+    this.name = 'AbiNotFoundError'
+  }
+}

@@ -8,6 +8,8 @@ import type { XtrimSupervisorOpts, IoRedisClientLike } from './XtrimSupervisor.j
 import { XtrimSupervisor } from './XtrimSupervisor.js'
 import { RedisKeys } from '../redis/keys.js'
 import { ChainIdMismatchError } from '../errors.js'
+import { AbiStore } from '../abi/AbiStore.js'
+import { AbiBootstrapper } from '../abi/AbiBootstrapper.js'
 import type { ParserEvent } from '../types.js'
 
 export class Parser {
@@ -63,10 +65,15 @@ export class Parser {
       throw new ChainIdMismatchError(this.opts.chain.id, chainId)
     }
 
+    const abiFallback = this.opts.abiFallback ?? 'rpc-current'
+    const abiStore = new AbiStore(this.redis)
+    const abiBootstrapper = new AbiBootstrapper(this.chainClient, abiStore, { abiFallback })
+
     this.blockProcessor = new BlockProcessor({
       chainId,
-      chainClient: this.chainClient,
       workerPool: this.workerPool,
+      abiBootstrapper,
+      abiStore,
     })
 
     const syncKey = RedisKeys.syncHash(chainId)
