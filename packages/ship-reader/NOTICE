@@ -1,0 +1,31 @@
+@coopenomics/coopos-ship-reader
+Copyright (c) 2024 Coopenomics contributors
+Licensed under the MIT License.
+
+---
+
+ATTRIBUTION
+
+This package is a clean-room rewrite. No source files from any of the
+attributed projects have been copied. Algorithms and behavioural patterns
+have been re-implemented independently from public protocol specifications
+and documentation.
+
+NO FILE FROM @blockmatic/eosio-ship-reader HAS BEEN COPIED OR ADAPTED.
+This is a clean-room implementation.
+
+1. EOS Rio / Hyperion History Solution
+   Copyright (c) 2019-2024 EOS Rio
+   License: MIT (https://github.com/eosrio/hyperion-history-api/blob/master/LICENSE)
+   Contribution: Native-delta table whitelist (22 EOSIO system tables),
+                 lookup_key computation patterns, and native-table row type
+                 definitions have been re-implemented from the Hyperion
+                 open-source specification and public EOS documentation.
+
+2. AntelopeIO / Leap
+   Copyright (c) 2021-2024 AntelopeIO / Block.one contributors
+   License: Apache-2.0 (https://github.com/AntelopeIO/leap/blob/main/LICENSE)
+   Contribution: SHiP (State History Plugin) protocol specification,
+                 get_blocks_request_v0 / get_blocks_result_v0 message
+                 format, and native table ABI type definitions are derived
+                 from the public Leap node implementation specification.

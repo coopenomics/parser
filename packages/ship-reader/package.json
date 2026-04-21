@@ -1,0 +1,55 @@
+{
+  "name": "@coopenomics/coopos-ship-reader",
+  "version": "0.1.0",
+  "description": "Clean-room SHiP WebSocket client for EOSIO/Antelope blockchains",
+  "license": "MIT",
+  "author": "Coopenomics contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/coopenomics/coopos-ship-reader"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "LICENSE-THIRD-PARTY.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
+    "bench": "tsx benchmarks/deserialize-perf.ts"
+  },
+  "dependencies": {
+    "@wharfkit/antelope": "^1.1.0",
+    "ws": "^8.17.1"
+  },
+  "optionalDependencies": {
+    "@eosrio/node-abieos": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0",
+    "eslint": "^8.57.0",
+    "tsup": "^8.1.0",
+    "tsx": "^4.15.7",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
