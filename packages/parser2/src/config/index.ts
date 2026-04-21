@@ -15,6 +15,7 @@ export interface ParserOptions {
   logger?: { level?: string; pretty?: boolean }
   health?: { enabled?: boolean; port?: number; lagThresholdSeconds?: number }
   metrics?: { enabled?: boolean; port?: number }
+  irreversibleOnly?: boolean
   noSignalHandlers?: boolean
 }
 

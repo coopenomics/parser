@@ -6,6 +6,7 @@ import { WorkerPool } from '../workers/WorkerPool.js'
 import { BlockProcessor } from './BlockProcessor.js'
 import type { XtrimSupervisorOpts } from './XtrimSupervisor.js'
 import { XtrimSupervisor } from './XtrimSupervisor.js'
+import { ForkDetector } from './ForkDetector.js'
 import { RedisKeys } from '../redis/keys.js'
 import { ChainIdMismatchError } from '../errors.js'
 import { AbiStore } from '../abi/AbiStore.js'
@@ -104,12 +105,22 @@ export class Parser {
       havePositions,
     }
 
+    const irreversibleOnly = this.opts.irreversibleOnly ?? false
+    const forkDetector = new ForkDetector(chainId)
+
     for await (const block of this.chainClient.streamBlocks(streamOpts)) {
       if (this.stopSignal) break
 
-      const events: ParserEvent[] = await this.blockProcessor.process(block)
+      if (irreversibleOnly && block.thisBlock.blockNum > block.lastIrreversible.blockNum) {
+        this.chainClient.ack(1)
+        continue
+      }
 
-      for (const event of events) {
+      const forkEvent = forkDetector.check(block.thisBlock.blockNum, block.thisBlock.blockId)
+      const events: ParserEvent[] = await this.blockProcessor.process(block)
+      const toPublish: ParserEvent[] = forkEvent ? [forkEvent, ...events] : events
+
+      for (const event of toPublish) {
         await this.redis.xadd(eventsStream, this.eventToFields(event))
       }
 
