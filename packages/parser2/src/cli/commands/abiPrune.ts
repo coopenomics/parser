@@ -1,6 +1,29 @@
+/**
+ * CLI-команда: parser abi-prune
+ *
+ * Удаляет устаревшие версии ABI из Redis Sorted Set.
+ *
+ * Проблема: каждый вызов eosio::setabi сохраняет новую версию ABI в ZSET.
+ * За месяцы/годы для активных контрактов накапливаются сотни версий,
+ * большинство из которых уже никогда не понадобятся.
+ *
+ * Логика удаления: удаляем версии со score (block_num) < olderThan.
+ * Исключительная верхняя граница: `(olderThan` — чтобы не удалить
+ * версию ровно на границе (версия exactAt должна остаться как «начальная»
+ * для блоков начиная с olderThan).
+ *
+ * Защита: не допускаем удаление ВСЕХ версий — хотя бы одна должна остаться.
+ *
+ * Режим --dry-run: показывает что было бы удалено, не изменяя Redis.
+ */
+
 import type { RedisStore } from '../../ports/RedisStore.js'
 import { RedisKeys } from '../../redis/keys.js'
 
+/**
+ * Выполняет prune для одного контракта.
+ * Выбрасывает Error если все версии попадут под удаление (safety guard).
+ */
 async function pruneContract(
   redis: RedisStore,
   contract: string,
@@ -14,10 +37,11 @@ async function pruneContract(
     return { pruned: 0, remaining: 0, oldestScore: null, newestScore: null }
   }
 
-  // Count candidates: score strictly less than olderThan (exclusive upper bound)
+  // Считаем кандидатов: score строго меньше olderThan (исключительная верхняя граница)
   const candidateCount = await redis.zcount(key, '-inf', `(${olderThan}`)
   const remaining = total - candidateCount
 
+  // Safety: нельзя удалить последнюю версию — без ABI декодирование сломается
   if (remaining < 1 && candidateCount > 0) {
     throw new Error(`Cannot prune all ABI versions for ${contract} — at least one must remain`)
   }
@@ -29,6 +53,15 @@ async function pruneContract(
   return { pruned: dryRun ? 0 : candidateCount, remaining, oldestScore: null, newestScore: null }
 }
 
+/**
+ * Основная функция команды abi-prune.
+ *
+ * @param redis — Redis-клиент.
+ * @param contract — имя контракта (null если allContracts=true).
+ * @param olderThan — block_num: удалить версии с block_num < olderThan.
+ * @param dryRun — только показать, не удалять.
+ * @param allContracts — обработать все контракты в Redis (SCAN parser2:abi:*).
+ */
 export async function abiPrune(
   redis: RedisStore,
   contract: string | null,
@@ -41,6 +74,7 @@ export async function abiPrune(
   }
 
   if (allContracts) {
+    // SCAN по паттерну: находим все ABI-ключи во всех контрактах
     const keys = await redis.scan('parser2:abi:*')
     if (keys.length === 0) {
       console.log('No ABI history found.')
@@ -70,7 +104,7 @@ export async function abiPrune(
     return
   }
 
-  // Single contract
+  // Одиночный контракт
   const key = RedisKeys.abiZset(contract!)
   const total = await redis.zcard(key)
   if (total === 0) {
@@ -78,6 +112,7 @@ export async function abiPrune(
     return
   }
 
+  // Исключительная верхняя граница '(N': не трогаем версию ровно на olderThan
   const candidateCount = await redis.zcount(key, '-inf', `(${olderThan}`)
   const remaining = total - candidateCount
 

@@ -1,25 +1,55 @@
+/**
+ * CLI-команда: parser list-dead-letters
+ *
+ * Выводит содержимое dead-letter stream(ов) в табличном или JSON формате.
+ *
+ * Dead-letter stream: ce:parser2:<chainId>:dead:<subId>
+ * Каждая запись содержит поля:
+ *   data        — оригинальный JSON ParserEvent
+ *   failureCount — число провалов (обычно = FAILURE_THRESHOLD = 3)
+ *   lastError   — текст последнего исключения
+ *   subId       — идентификатор подписки-владельца
+ *
+ * Режим --all: сканирует Redis по паттерну ce:parser2:<chainId>:dead:*
+ * и показывает все dead-letter стримы для цепи.
+ *
+ * Режим --json: выводит JSON-массив объектов с разобранными полями —
+ * удобен для автоматизации (парсинг в скриптах, jq, etc).
+ */
+
 import type { RedisStore } from '../../ports/RedisStore.js'
 import { RedisKeys } from '../../redis/keys.js'
 
+/** Нормализованная структура одной dead-letter записи для вывода. */
 interface DeadLetterEntry {
   entryId: string
   eventId: string
   kind: string
   failureCount: number
   lastError: string
+  /** ISO-8601 время попадания в dead-letter (из timestamp части entry ID). */
   deadLetteredAt: string
   originalPayload: unknown
 }
 
+/**
+ * Конвертирует Redis Stream entry ID в ISO timestamp.
+ * Entry ID формат: <unix_ms>-<seq>. Первая часть — Unix timestamp в мс.
+ */
 function entryIdToTimestamp(entryId: string): string {
   const ms = parseInt(entryId.split('-')[0] ?? '0', 10)
   return new Date(ms).toISOString()
 }
 
+/** Обрезает строку до max символов с добавлением '…' при усечении. */
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 1) + '…' : s
 }
 
+/**
+ * Читает dead-letter записи из стрима и разбирает JSON поля.
+ * Ошибки парсинга игнорируются — выводим пустые строки вместо краша.
+ */
 async function readDeadLetters(
   redis: RedisStore,
   stream: string,
@@ -38,7 +68,7 @@ async function readDeadLetters(
         eventId = typeof parsed['event_id'] === 'string' ? parsed['event_id'] : ''
         kind = typeof parsed['kind'] === 'string' ? parsed['kind'] : ''
         originalPayload = parsed
-      } catch { /* ignore */ }
+      } catch { /* невалидный JSON в поле data — оставляем пустые строки */ }
     }
     return {
       entryId: msg.id,
@@ -52,6 +82,17 @@ async function readDeadLetters(
   })
 }
 
+/**
+ * Основная функция команды list-dead-letters.
+ *
+ * @param redis — Redis-клиент.
+ * @param chainId — идентификатор цепи.
+ * @param subId — идентификатор подписки (null если all=true).
+ * @param json — вывод в JSON вместо таблицы.
+ * @param limit — максимум записей за вызов.
+ * @param fromEntry — начало диапазона XRANGE (по умолчанию '-').
+ * @param all — показать все dead-letter стримы для chainId.
+ */
 export async function listDeadLetters(
   redis: RedisStore,
   chainId: string,
@@ -64,6 +105,7 @@ export async function listDeadLetters(
   let streams: Array<{ key: string; subId: string }> = []
 
   if (all) {
+    // SCAN по паттерну: ce:parser2:<chainId>:dead:*
     const pattern = RedisKeys.deadLetterStream(chainId, '*')
     const keys = await redis.scan(pattern)
     const prefix = `ce:parser2:${chainId}:dead:`
@@ -78,6 +120,7 @@ export async function listDeadLetters(
   }
 
   if (json) {
+    // JSON-режим: собираем все записи и выводим единым массивом
     const allEntries: Array<DeadLetterEntry & { subId: string }> = []
     for (const { key, subId: sid } of streams) {
       const entries = await readDeadLetters(redis, key, limit, fromEntry)
@@ -87,6 +130,7 @@ export async function listDeadLetters(
     return
   }
 
+  // Табличный режим
   for (const { key, subId: sid } of streams) {
     const total = await redis.xlen(key)
     console.log(`Dead letters for ${sid}: ${total} total`)
@@ -101,6 +145,7 @@ export async function listDeadLetters(
       continue
     }
 
+    // Ширина колонок для выравнивания
     const cols = {
       entryId: 22,
       eventId: 50,
@@ -109,6 +154,7 @@ export async function listDeadLetters(
       lastError: 40,
     }
     if (all) {
+      // В режиме --all добавляем колонку SUB ID
       const subCol = 12
       console.log(
         'SUB ID'.padEnd(subCol) +

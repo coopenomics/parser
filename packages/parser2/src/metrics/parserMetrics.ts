@@ -1,3 +1,16 @@
+/**
+ * Prometheus-метрики для парсера (серверная сторона: SHiP → Redis).
+ *
+ * Все метрики регистрируются в изолированном Registry — не в default глобальном.
+ * Это важно для тестов (каждый тест создаёт свой registry) и для случаев
+ * когда парсер запускается вместе с другими Prometheus-экспортёрами в процессе.
+ *
+ * Использование: createParserMetrics() → объект с counter/gauge/histogram полями.
+ * Parser главный класс передаёт их в BlockProcessor, XtrimSupervisor и HttpServer.
+ *
+ * Метрики можно наблюдать через GET /metrics (если health.enabled + metrics.enabled).
+ */
+
 import {
   Counter,
   Gauge,
@@ -5,20 +18,45 @@ import {
   Registry,
 } from 'prom-client'
 
+/**
+ * Интерфейс парсерских метрик.
+ * Хранится как поле Parser класса и передаётся в подкомпоненты.
+ */
 export interface ParserMetrics {
   readonly registry: Registry
+  /** Счётчик обработанных блоков. Растёт монотонно. Используется для расчёта throughput. */
   blocksProcessedTotal: Counter
+  /** Текущее отставание: (head_block_time - current_block_time) в секундах.
+   *  0 = в реальном времени. Большие значения → парсер не успевает. */
   indexingLagSeconds: Gauge
+  /** Счётчик опубликованных событий по видам (action/delta/native-delta/fork).
+   *  Позволяет видеть объём трафика каждого типа данных. */
   eventsPublishedTotal: Counter<'kind'>
+  /** Счётчик попаданий в кэш ABI (worker pool нашёл ABI без запроса к Redis/Chain). */
   abiCacheHitsTotal: Counter
+  /** Счётчик промахов кэша ABI (пришлось читать из Redis или запрашивать Chain API). */
   abiCacheMissesTotal: Counter
+  /** Текущая длина Redis events stream. Растущее значение → XTRIM не справляется или отключён. */
   streamLength: Gauge
+  /** Счётчик удалённых записей XTRIM. Помогает оценить объём хранимых данных. */
   xtrimmedEntriesTotal: Counter
+  /** Гистограмма времени обработки одного блока (секунды).
+   *  Buckets: 1ms–5s. Всплески → медленный ABI декодинг или Redis перегружен. */
   blockProcessingDuration: Histogram
+  /** Текущая глубина очереди Piscina worker pool.
+   *  Растущая очередь → worker pool не успевает за темпом блоков. */
   workerPoolQueueDepth: Gauge
+  /** Счётчик ошибок обработки блоков (исключения в BlockProcessor).
+   *  В норме должен быть близок к 0. */
   blockProcessingErrors: Counter
 }
 
+/**
+ * Создаёт набор парсерских метрик в изолированном Registry.
+ *
+ * @param prefix — префикс имён метрик. По умолчанию 'parser2'.
+ *   Меняется в тестах и при запуске нескольких инстансов.
+ */
 export function createParserMetrics(prefix = 'parser2'): ParserMetrics {
   const registry = new Registry()
 
@@ -65,6 +103,7 @@ export function createParserMetrics(prefix = 'parser2'): ParserMetrics {
     registers: [registry],
   })
 
+  // Buckets подобраны для типичного диапазона: 1ms (быстрый кэш) → 5s (медленный ABI fetch)
   const blockProcessingDuration = new Histogram({
     name: `${prefix}_block_processing_duration_seconds`,
     help: 'Duration of block processing in seconds',
