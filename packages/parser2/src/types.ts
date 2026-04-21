@@ -31,7 +31,7 @@ export interface DeltaEvent {
   present: boolean
 }
 
-export interface NativeDeltaEvent {
+export interface NativeDeltaEvent<T = Record<string, unknown>> {
   kind: 'native-delta'
   event_id: string
   chain_id: string
@@ -40,7 +40,7 @@ export interface NativeDeltaEvent {
   block_id: string
   table: string
   lookup_key: string
-  data: Record<string, unknown>
+  data: T
   present: boolean
 }
 

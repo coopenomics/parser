@@ -28,6 +28,28 @@ export { fromConfigFile, parseConfig } from './config/index.js'
 export { RedisKeys } from './redis/keys.js'
 export type { ParserOptions } from './config/index.js'
 export type { ParserEvent, ActionEvent, DeltaEvent, NativeDeltaEvent, ForkEvent } from './types.js'
+export type {
+  NativeTableName,
+  NativeRowTypeMap,
+  NativePermissionRow,
+  NativePermissionLinkRow,
+  NativeAccountRow,
+  NativeAccountMetadataRow,
+  NativeCodeRow,
+  NativeContractTableRow,
+  NativeKeyValueRow,
+  NativeReceivedBlockRow,
+  NativeBlockInfoRow,
+  NativeResourceLimitsRow,
+  NativeResourceLimitsStateRow,
+  NativeResourceLimitsConfigRow,
+  NativeResourceUsageRow,
+  NativeGlobalPropertyRow,
+  NativeGeneratedTransactionRow,
+  NativeProtocolStateRow,
+  NativeFillStatusRow,
+} from '@coopenomics/coopos-ship-reader'
+export { NATIVE_TABLE_NAMES, isNativeTableName } from '@coopenomics/coopos-ship-reader'
 export type { ChainClient } from './ports/ChainClient.js'
 export type { RedisStore } from './ports/RedisStore.js'
 export {

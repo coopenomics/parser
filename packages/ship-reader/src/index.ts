@@ -34,6 +34,19 @@ export type {
   NativePermissionLinkRow,
   NativeAccountRow,
   NativeAccountMetadataRow,
+  NativeCodeRow,
+  NativeContractTableRow,
+  NativeKeyValueRow,
+  NativeReceivedBlockRow,
+  NativeBlockInfoRow,
+  NativeResourceLimitsRow,
+  NativeResourceLimitsStateRow,
+  NativeResourceLimitsConfigRow,
+  NativeResourceUsageRow,
+  NativeGlobalPropertyRow,
+  NativeGeneratedTransactionRow,
+  NativeProtocolStateRow,
+  NativeFillStatusRow,
 } from './native-tables/index.js'
 
 export { NATIVE_TABLE_NAMES, isNativeTableName, computeLookupKey } from './native-tables/index.js'

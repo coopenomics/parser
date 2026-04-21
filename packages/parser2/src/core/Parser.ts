@@ -74,6 +74,7 @@ export class Parser {
       workerPool: this.workerPool,
       abiBootstrapper,
       abiStore,
+      chainClient: this.chainClient,
     })
 
     const syncKey = RedisKeys.syncHash(chainId)

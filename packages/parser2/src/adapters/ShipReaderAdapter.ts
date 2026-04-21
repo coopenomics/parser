@@ -1,5 +1,5 @@
 import { ShipClient } from '@coopenomics/coopos-ship-reader'
-import type { ShipBlock, ChainInfo, GetBlocksOptions } from '@coopenomics/coopos-ship-reader'
+import type { ShipBlock, ChainInfo, ShipDelta, GetBlocksOptions, NativeDeltaEvent as ShipNativeDeltaEvent } from '@coopenomics/coopos-ship-reader'
 import type { ChainClient } from '../ports/ChainClient.js'
 
 export class ShipReaderAdapter implements ChainClient {
@@ -40,5 +40,9 @@ export class ShipReaderAdapter implements ChainClient {
 
   getRawAbi(contract: string): Promise<Uint8Array> {
     return this.client.getRawAbi(contract)
+  }
+
+  deserializeNativeDelta(delta: ShipDelta): ShipNativeDeltaEvent {
+    return this.client.deserializer.deserializeNativeDelta(delta)
   }
 }

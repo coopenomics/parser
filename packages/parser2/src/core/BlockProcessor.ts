@@ -1,17 +1,20 @@
 import PQueue from 'p-queue'
 import { ABI, Blob as AntelopeBlob } from '@wharfkit/antelope'
+import { isNativeTableName } from '@coopenomics/coopos-ship-reader'
 import type { ShipBlock } from '@coopenomics/coopos-ship-reader'
 import type { WorkerPool } from '../workers/WorkerPool.js'
-import type { ParserEvent, ActionEvent, DeltaEvent } from '../types.js'
+import type { ParserEvent, ActionEvent, DeltaEvent, NativeDeltaEvent } from '../types.js'
 import { computeEventId } from '../events/eventId.js'
 import type { AbiBootstrapper } from '../abi/AbiBootstrapper.js'
 import type { AbiStore } from '../abi/AbiStore.js'
+import type { ChainClient } from '../ports/ChainClient.js'
 
 interface BlockProcessorOptions {
   chainId: string
   workerPool: WorkerPool
   abiBootstrapper: AbiBootstrapper
   abiStore: AbiStore
+  chainClient: ChainClient
 }
 
 function abiToJson(bytes: Uint8Array): string {
@@ -30,12 +33,14 @@ export class BlockProcessor {
   private workerPool: WorkerPool
   private abiBootstrapper: AbiBootstrapper
   private abiStore: AbiStore
+  private chainClient: ChainClient
 
   constructor(opts: BlockProcessorOptions) {
     this.chainId = opts.chainId
     this.workerPool = opts.workerPool
     this.abiBootstrapper = opts.abiBootstrapper
     this.abiStore = opts.abiStore
+    this.chainClient = opts.chainClient
     this.queue = new PQueue({ concurrency: 1 })
   }
 
@@ -44,7 +49,10 @@ export class BlockProcessor {
   }
 
   private async processBlock(block: ShipBlock): Promise<ParserEvent[]> {
-    const events: ParserEvent[] = []
+    const actionEvents: ActionEvent[] = []
+    const deltaEvents: DeltaEvent[] = []
+    const nativeDeltaEvents: NativeDeltaEvent[] = []
+
     const blockNum = block.thisBlock.blockNum
     const blockId = block.thisBlock.blockId
     const blockTime = block.traces[0]?.blockTime ?? new Date().toISOString()
@@ -92,11 +100,11 @@ export class BlockProcessor {
         receipt: trace.receipt,
       }
 
-      events.push({ ...partial, event_id: computeEventId(partial) })
+      actionEvents.push({ ...partial, event_id: computeEventId(partial) })
     }
 
     for (const delta of block.deltas) {
-      // Fallback ABI update path: account native delta carries new ABI bytes
+      // ABI update path: account native delta carries new ABI bytes
       if (delta.name === 'account' && delta.present && delta.rowRaw.length > 0) {
         const eosioAbiBytes = await this.abiBootstrapper.ensureAbi('eosio', blockNum)
         const eosioAbiJson = eosioAbiBytes && eosioAbiBytes.length > 0 ? abiToJson(eosioAbiBytes) : '{}'
@@ -114,48 +122,69 @@ export class BlockProcessor {
             await this.abiStore.storeAbi(accountName, blockNum, Buffer.from(abiHex, 'hex'))
           }
         } catch { /* ignore failed account delta decode */ }
+      }
+
+      // DeltaEvent for contract_row (user-ABI decoded table rows)
+      if (delta.name === 'contract_row') {
+        if (!delta.code || !delta.scope || !delta.table || !delta.primaryKey) continue
+
+        const abiBytes = await this.abiBootstrapper.ensureAbi(delta.code, blockNum)
+        const abiJson = abiBytes && abiBytes.length > 0 ? abiToJson(abiBytes) : '{}'
+
+        let value: Record<string, unknown> = {}
+        if (delta.rowRaw.length > 0) {
+          try {
+            value = await this.workerPool.run({
+              rawBinary: delta.rowRaw,
+              abiJson,
+              contract: delta.code,
+              typeName: delta.table,
+              kind: 'delta',
+            })
+          } catch {
+            value = {}
+          }
+        }
+
+        const partial: Omit<DeltaEvent, 'event_id'> = {
+          kind: 'delta',
+          chain_id: this.chainId,
+          block_num: blockNum,
+          block_time: blockTime,
+          block_id: blockId,
+          code: delta.code,
+          scope: delta.scope,
+          table: delta.table,
+          primary_key: delta.primaryKey,
+          value,
+          present: delta.present,
+        }
+
+        deltaEvents.push({ ...partial, event_id: computeEventId(partial) })
         continue
       }
 
-      if (delta.name !== 'contract_row') continue
-      if (!delta.code || !delta.scope || !delta.table || !delta.primaryKey) continue
-
-      const abiBytes = await this.abiBootstrapper.ensureAbi(delta.code, blockNum)
-      const abiJson = abiBytes && abiBytes.length > 0 ? abiToJson(abiBytes) : '{}'
-
-      let value: Record<string, unknown> = {}
-      if (delta.rowRaw.length > 0) {
+      // NativeDeltaEvent for all native tables (except contract_row handled above)
+      if (isNativeTableName(delta.name)) {
         try {
-          value = await this.workerPool.run({
-            rawBinary: delta.rowRaw,
-            abiJson,
-            contract: delta.code,
-            typeName: delta.table,
-            kind: 'delta',
-          })
-        } catch {
-          value = {}
-        }
+          const native = this.chainClient.deserializeNativeDelta(delta)
+          const partial: Omit<NativeDeltaEvent, 'event_id'> = {
+            kind: 'native-delta',
+            chain_id: this.chainId,
+            block_num: blockNum,
+            block_time: blockTime,
+            block_id: blockId,
+            table: native.table,
+            lookup_key: native.lookup_key,
+            data: native.data,
+            present: native.present,
+          }
+          nativeDeltaEvents.push({ ...partial, event_id: computeEventId(partial) })
+        } catch { /* ignore deserialization errors for individual native deltas */ }
       }
-
-      const partial: Omit<DeltaEvent, 'event_id'> = {
-        kind: 'delta',
-        chain_id: this.chainId,
-        block_num: blockNum,
-        block_time: blockTime,
-        block_id: blockId,
-        code: delta.code,
-        scope: delta.scope,
-        table: delta.table,
-        primary_key: delta.primaryKey,
-        value,
-        present: delta.present,
-      }
-
-      events.push({ ...partial, event_id: computeEventId(partial) })
     }
 
-    return events
+    return [...actionEvents, ...deltaEvents, ...nativeDeltaEvents]
   }
 
   get pendingCount(): number {
