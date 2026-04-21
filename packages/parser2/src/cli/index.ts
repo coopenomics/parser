@@ -5,6 +5,8 @@ import { ConfigValidationError, ConfigSecurityError } from '../errors.js'
 import { listSubscriptions } from './commands/listSubscriptions.js'
 import { resetSubscription } from './commands/resetSubscription.js'
 import { abiPrune } from './commands/abiPrune.js'
+import { listDeadLetters } from './commands/listDeadLetters.js'
+import { replayDeadLetter } from './commands/replayDeadLetter.js'
 
 const program = new Command()
 
@@ -132,6 +134,74 @@ program
       const olderThan = opts.olderThan !== undefined ? Number(opts.olderThan) : 0
       if (isNaN(olderThan)) throw new Error(`Invalid --older-than value: ${opts.olderThan}`)
       await abiPrune(redis, opts.contract ?? null, olderThan, opts.dryRun ?? false, opts.allContracts ?? false)
+      process.exit(0)
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err))
+      process.exit(1)
+    } finally {
+      await redis?.quit()
+    }
+  })
+
+program
+  .command('list-dead-letters')
+  .description('Inspect dead-letter stream for a subscription')
+  .requiredOption('--config <file>', 'Config file path')
+  .option('--sub-id <id>', 'Subscription ID to inspect')
+  .option('--chain-id <id>', 'Override chain ID from config')
+  .option('--all', 'Inspect all dead-letter streams')
+  .option('--json', 'Output as JSON')
+  .option('--limit <n>', 'Max entries to show', '100')
+  .option('--from <entryId>', 'Start from this entry ID (pagination)', '-')
+  .action(async (opts: { config: string; subId?: string; chainId?: string; all?: boolean; json?: boolean; limit?: string; from?: string }) => {
+    let redis: IoRedisStore | null = null
+    try {
+      const config = fromConfigFile(opts.config)
+      const chainId = opts.chainId ?? config.chain?.id ?? 'default'
+      redis = new IoRedisStore(config.redis)
+      await redis.connect()
+      await listDeadLetters(
+        redis,
+        chainId,
+        opts.subId ?? null,
+        opts.json ?? false,
+        Number(opts.limit ?? 100),
+        opts.from ?? '-',
+        opts.all ?? false,
+      )
+      process.exit(0)
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err))
+      process.exit(1)
+    } finally {
+      await redis?.quit()
+    }
+  })
+
+program
+  .command('replay-dead-letter')
+  .description('Replay a dead-letter event back into the live stream')
+  .requiredOption('--config <file>', 'Config file path')
+  .requiredOption('--sub-id <id>', 'Subscription ID')
+  .option('--event-id <id>', 'Event ID to replay')
+  .option('--all', 'Replay all dead-letter events for the subscription')
+  .option('--chain-id <id>', 'Override chain ID from config')
+  .option('--dry-run', 'Show what would be done without executing')
+  .action(async (opts: { config: string; subId: string; eventId?: string; all?: boolean; chainId?: string; dryRun?: boolean }) => {
+    let redis: IoRedisStore | null = null
+    try {
+      const config = fromConfigFile(opts.config)
+      const chainId = opts.chainId ?? config.chain?.id ?? 'default'
+      redis = new IoRedisStore(config.redis)
+      await redis.connect()
+      await replayDeadLetter(
+        redis,
+        chainId,
+        opts.subId,
+        opts.eventId ?? null,
+        opts.all ?? false,
+        opts.dryRun ?? false,
+      )
       process.exit(0)
     } catch (err) {
       console.error(err instanceof Error ? err.message : String(err))

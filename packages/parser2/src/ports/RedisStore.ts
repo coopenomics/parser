@@ -28,6 +28,8 @@ export interface RedisStore {
   ): Promise<StreamMessage[]>
   xrange(stream: string, start: string, end: string, count: number): Promise<StreamMessage[]>
   xrevrange(stream: string, end: string, start: string, count: number): Promise<StreamMessage[]>
+  xlen(stream: string): Promise<number>
+  xdel(stream: string, id: string): Promise<number>
   xack(stream: string, group: string, id: string): Promise<void>
 
   // Sorted set operations

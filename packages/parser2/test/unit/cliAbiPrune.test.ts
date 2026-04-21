@@ -11,7 +11,7 @@ function makeRedis(opts: {
   const { total = 0, candidateCount = 0, pruned = candidateCount, scanKeys = [] } = opts
   return {
     xadd: vi.fn(), xtrim: vi.fn(), xgroupCreate: vi.fn(), xgroupSetId: vi.fn(),
-    xinfoGroups: vi.fn(), xreadGroup: vi.fn(), xrange: vi.fn(), xrevrange: vi.fn(), xack: vi.fn(),
+    xinfoGroups: vi.fn(), xreadGroup: vi.fn(), xrange: vi.fn(), xrevrange: vi.fn(), xlen: vi.fn(), xdel: vi.fn(), xack: vi.fn(),
     zadd: vi.fn(), zrangeByscoreRev: vi.fn(), zrangeByScore: vi.fn(),
     zcount: vi.fn().mockResolvedValue(candidateCount),
     zremRangeByScore: vi.fn().mockResolvedValue(pruned),

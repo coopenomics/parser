@@ -16,7 +16,7 @@ function makeRedis(
   return {
     xadd: vi.fn(), xtrim: vi.fn(), xgroupCreate: vi.fn(), xgroupSetId: vi.fn(),
     xinfoGroups: vi.fn().mockResolvedValue(groups),
-    xreadGroup: vi.fn(), xrange: vi.fn(), xrevrange: vi.fn(), xack: vi.fn(),
+    xreadGroup: vi.fn(), xrange: vi.fn(), xrevrange: vi.fn(), xlen: vi.fn(), xdel: vi.fn(), xack: vi.fn(),
     zadd: vi.fn(), zrangeByscoreRev: vi.fn(), zrangeByScore: vi.fn(), zcount: vi.fn(),
     zremRangeByScore: vi.fn(), zcard: vi.fn(),
     hset: vi.fn(), hget: vi.fn(), hgetAll: vi.fn().mockResolvedValue(subs),

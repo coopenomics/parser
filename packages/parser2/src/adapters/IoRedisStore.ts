@@ -16,6 +16,8 @@ interface IRedisClient {
   ): Promise<Array<[string, Array<[string, string[]]>]> | null>
   xrange(key: string, start: string, end: string, count: string, countVal: number): Promise<Array<[string, string[]]>>
   xrevrange(key: string, end: string, start: string, count: string, countVal: number): Promise<Array<[string, string[]]>>
+  xlen(key: string): Promise<number>
+  xdel(key: string, ...ids: string[]): Promise<number>
   xack(stream: string, group: string, id: string): Promise<number>
   zadd(key: string, score: number, member: string): Promise<number>
   zrangebyscore(key: string, min: string, max: string, limit: string, offset: number, count: number): Promise<string[]>
@@ -163,6 +165,14 @@ export class IoRedisStore implements RedisStore {
   async xrevrange(stream: string, end: string, start: string, count: number): Promise<StreamMessage[]> {
     const raw = await this.client.xrevrange(stream, end, start, 'COUNT', count)
     return parseStreamEntries(raw)
+  }
+
+  async xlen(stream: string): Promise<number> {
+    return this.client.xlen(stream)
+  }
+
+  async xdel(stream: string, id: string): Promise<number> {
+    return this.client.xdel(stream, id)
   }
 
   async xack(stream: string, group: string, id: string): Promise<void> {
