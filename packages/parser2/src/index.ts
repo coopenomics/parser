@@ -1,4 +1,23 @@
 export { Parser } from './core/Parser.js'
+export {
+  ParserClient,
+  SubscriptionLock,
+  RedisConsumer,
+  FailureTracker,
+  matchFilters,
+  CONSUMER_NAME,
+} from './client/index.js'
+export type {
+  ParserClientOptions,
+  SubscriptionFilter,
+  ActionFilter,
+  DeltaFilter,
+  NativeDeltaFilter,
+  ForkFilter,
+  LockState,
+  SubscriptionLockOptions,
+} from './client/index.js'
+export type { StreamMessage } from './ports/RedisStore.js'
 export { BlockProcessor } from './core/BlockProcessor.js'
 export { XtrimSupervisor } from './core/XtrimSupervisor.js'
 export { WorkerPool } from './workers/WorkerPool.js'
