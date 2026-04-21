@@ -64,8 +64,19 @@ jobs:
     services:
       redis:
         image: redis:7-alpine
-        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
-        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 6379:6379
+      blockchain:
+        image: dicoop/blockchain:v5.1.0-dev
+        ports:
+          - 8888:8888
+          - 8080:8080
+        # nodeos запускается автоматически по CMD образа; порты 8888 (HTTP API) и 8080 (SHiP WS)
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -74,9 +85,22 @@ jobs:
         with: { node-version: '20', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @coopenomics/coopos-ship-reader build
+      - name: Wait for blockchain node
+        run: |
+          echo "Waiting for Chain API..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8888/v1/chain/get_info > /dev/null 2>&1; then
+              echo "Chain API ready"
+              break
+            fi
+            echo "  attempt $i/30..."
+            sleep 2
+          done
       - run: pnpm --filter @coopenomics/parser test:integration
         env:
           REDIS_URL: redis://localhost:6379
+          CHAIN_URL: http://localhost:8888
+          SHIP_URL: ws://localhost:8080
 
   build:
     name: Build
