@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with: { version: '10' }
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'pnpm' }
@@ -31,7 +31,7 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with: { version: '10' }
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'pnpm' }
@@ -44,7 +44,7 @@ jobs:
     needs: typecheck
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with: { version: '10' }
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'pnpm' }
@@ -66,7 +66,7 @@ jobs:
         ports: ['6379:6379']
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with: { version: '10' }
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'pnpm' }
@@ -81,7 +81,7 @@ jobs:
     needs: integration
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with: { version: '10' }
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: 'pnpm' }
@@ -103,7 +103,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with: { version: '10' }
       - uses: actions/setup-node@v4
         with:

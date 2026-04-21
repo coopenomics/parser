@@ -74,7 +74,7 @@ importers:
         version: 8.20.0
     devDependencies:
       '@types/node':
-        specifier: ^20.14.0
+        specifier: ^20.3.0
         version: 20.19.39
       '@types/ws':
         specifier: ^8.5.10

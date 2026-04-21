@@ -14,14 +14,23 @@ interface AbieosBridge {
   destroy(): void
 }
 
+/**
+ * Пробует загрузить нативный abieos модуль.
+ * Совместимые пакеты (устанавливаются отдельно, не в зависимостях):
+ *   - @eosrio/node-abieos  — официальный Node.js биндинг
+ *   - @coopenomics/abieos  — форк coopenomics (когда будет опубликован на npm)
+ * Если ни один не найден — возвращает null, и будет использован wharfkit fallback.
+ */
 function tryLoadAbieos(): AbieosBridge | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('@eosrio/node-abieos') as AbieosBridge
-    return mod
-  } catch {
-    return null
+  const candidates = ['@coopenomics/abieos', '@eosrio/node-abieos']
+  for (const pkg of candidates) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require(pkg) as AbieosBridge
+      if (mod && typeof mod.loadAbiHex === 'function') return mod
+    } catch { /* пакет не установлен — пробуем следующий */ }
   }
+  return null
 }
 
 function uint8ToHex(arr: Uint8Array): string {
