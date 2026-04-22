@@ -130,9 +130,11 @@ export function decodeBlocksResult(raw: unknown, abi: ShipAbi, blockNum: number,
       const at = Array.isArray(atVariant) ? (atVariant[1] as RawActionTrace) : (atVariant as RawActionTrace)
       if (!at?.act) continue
 
+      // ABI decoder возвращает имена как Name объекты — нормализуем в строки
+      // иначе downstream (Serializer.decode в worker) пытается синтезировать ABI из Name-класса.
       const authorization: ActionAuthorization[] = (at.act.authorization ?? []).map(a => ({
-        actor: a.actor,
-        permission: a.permission,
+        actor: String(a.actor),
+        permission: String(a.permission),
       }))
 
       // at.receipt может быть variant-tuple [variantName, data] (wharfkit decode variant)
@@ -142,8 +144,8 @@ export function decodeBlocksResult(raw: unknown, abi: ShipAbi, blockNum: number,
         : at.receipt
       const receipt: ActionReceipt | null = receiptData
         ? ({
-            receiver: receiptData.receiver,
-            actDigest: receiptData.act_digest,
+            receiver: String(receiptData.receiver),
+            actDigest: String(receiptData.act_digest),
             globalSequence: BigInt(receiptData.global_sequence),
             recvSequence: BigInt(receiptData.recv_sequence),
             codeSequence: receiptData.code_sequence,
@@ -155,8 +157,8 @@ export function decodeBlocksResult(raw: unknown, abi: ShipAbi, blockNum: number,
       // Fallback: если at.global_sequence undefined — берём из receipt.
       const topGlobalSeq = at.global_sequence ?? receiptData?.global_sequence
       traces.push({
-        account: at.act.account,
-        name: at.act.name,
+        account: String(at.act.account),
+        name: String(at.act.name),
         authorization,
         actRaw: at.act.data instanceof Bytes ? at.act.data.array : Uint8Array.from([]),
         actionOrdinal: at.action_ordinal,
@@ -165,7 +167,7 @@ export function decodeBlocksResult(raw: unknown, abi: ShipAbi, blockNum: number,
         blockNum: thisBlock.blockNum,
         blockId: thisBlock.blockId,
         blockTime,
-        transactionId: tx.id,
+        transactionId: String(tx.id),
       })
     }
   }
@@ -184,17 +186,17 @@ export function decodeBlocksResult(raw: unknown, abi: ShipAbi, blockNum: number,
             name: 'contract_row',
             present: row.present,
             rowRaw: cr.value instanceof Bytes ? cr.value.array : Uint8Array.from([]),
-            code: cr.code,
-            scope: cr.scope,
-            table: cr.table,
-            primaryKey: cr.primary_key,
+            code: String(cr.code),
+            scope: String(cr.scope),
+            table: String(cr.table),
+            primaryKey: String(cr.primary_key),
           })
         } catch {
           // skip malformed row
         }
       } else {
         deltas.push({
-          name: dt.name,
+          name: String(dt.name),
           present: row.present,
           rowRaw: row.data instanceof Bytes ? row.data.array : Uint8Array.from([]),
         })
