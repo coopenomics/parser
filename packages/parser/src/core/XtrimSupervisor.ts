@@ -20,7 +20,7 @@ import type { RedisStore } from '../ports/RedisStore.js'
 
 export interface XtrimSupervisorOpts {
   redis: RedisStore
-  /** Имя стрима для очистки (обычно ce:parser2:<chainId>:events). */
+  /** Имя стрима для очистки (обычно ce:parser:<chainId>:events). */
   stream: string
   /** Интервал между trim-циклами в мс. По умолчанию 60 000 (1 минута). */
   intervalMs?: number

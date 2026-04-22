@@ -2,7 +2,7 @@
 
 Clean-room SHiP WebSocket client for EOSIO/Antelope blockchains. Streams blockchain blocks, deserializes actions and deltas via `@wharfkit/antelope`, with support for all 24 native system table delta types.
 
-Primary consumer: [`@coopenomics/parser2`](https://github.com/coopenomics/parser2).
+Primary consumer: [`@coopenomics/parser`](https://github.com/coopenomics/parser).
 
 ## Installation
 

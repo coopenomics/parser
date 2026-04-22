@@ -1,5 +1,5 @@
 {
-  "name": "coopenomics-parser2-workspace",
+  "name": "coopenomics-parser-workspace",
   "private": true,
   "scripts": {
     "build": "pnpm -r build",

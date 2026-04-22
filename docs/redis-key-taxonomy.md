@@ -1,21 +1,21 @@
 # Redis Key Taxonomy
 
 All keys used by `@coopenomics/parser` follow a consistent namespace scheme.
-Keys produced by the **parser (indexer)** use the prefix `ce:parser2:` or `parser2:`.
+Keys produced by the **parser (indexer)** use the prefix `ce:parser:` or `parser:`.
 
 ## Key catalogue
 
 | Key pattern | Type | TTL | Produced by | Consumed by | Description |
 |---|---|---|---|---|---|
-| `ce:parser2:{chainId}:events` | Stream | ∞ (XTRIM) | Parser | ParserClient | Unified event stream: all `action`, `delta`, `native-delta`, `fork` events |
-| `ce:parser2:{chainId}:dead:{subId}` | Stream | ∞ | FailureTracker | CLI / admin | Dead-letter stream for a specific subscription; entries include `data`, `failureCount`, `lastError`, `subId` |
-| `ce:parser2:{chainId}:reparse:{jobId}` | Stream | ∞ | CLI (future) | Parser | On-demand reparse job stream |
-| `parser2:abi:{contract}` | Sorted Set | ∞ | AbiStore | BlockProcessor / AbiBootstrapper | ABI version history; score = block_num, member = base64-encoded raw ABI bytes |
-| `parser2:sync:{chainId}` | Hash | ∞ | Parser | Parser (crash-recovery) | Sync checkpoint: `block_num`, `block_id`, `last_updated` |
-| `parser2:subs` | Hash | ∞ | ParserClient | CLI (list-subscriptions) | Subscription registry; field = subId, value = JSON metadata |
-| `parser2:sub:{subId}:failures` | Hash | 24 h | FailureTracker | FailureTracker / CLI | Per-event failure counter; field = event_id, value = count |
-| `parser2:sub:{subId}:lock` | String | 10 s (auto-renew) | SubscriptionLock | SubscriptionLock | Active-standby lock; value = instanceId |
-| `parser2:reparse:{jobId}` | Hash | ∞ | CLI (future) | Parser | Reparse job metadata |
+| `ce:parser:{chainId}:events` | Stream | ∞ (XTRIM) | Parser | ParserClient | Unified event stream: all `action`, `delta`, `native-delta`, `fork` events |
+| `ce:parser:{chainId}:dead:{subId}` | Stream | ∞ | FailureTracker | CLI / admin | Dead-letter stream for a specific subscription; entries include `data`, `failureCount`, `lastError`, `subId` |
+| `ce:parser:{chainId}:reparse:{jobId}` | Stream | ∞ | CLI (future) | Parser | On-demand reparse job stream |
+| `parser:abi:{contract}` | Sorted Set | ∞ | AbiStore | BlockProcessor / AbiBootstrapper | ABI version history; score = block_num, member = base64-encoded raw ABI bytes |
+| `parser:sync:{chainId}` | Hash | ∞ | Parser | Parser (crash-recovery) | Sync checkpoint: `block_num`, `block_id`, `last_updated` |
+| `parser:subs` | Hash | ∞ | ParserClient | CLI (list-subscriptions) | Subscription registry; field = subId, value = JSON metadata |
+| `parser:sub:{subId}:failures` | Hash | 24 h | FailureTracker | FailureTracker / CLI | Per-event failure counter; field = event_id, value = count |
+| `parser:sub:{subId}:lock` | String | 10 s (auto-renew) | SubscriptionLock | SubscriptionLock | Active-standby lock; value = instanceId |
+| `parser:reparse:{jobId}` | Hash | ∞ | CLI (future) | Parser | Reparse job metadata |
 
 ## Naming rules
 

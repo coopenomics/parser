@@ -38,23 +38,23 @@ describe('IoRedisStore', () => {
   })
 
   it('zadd calls redis.zadd with score and member', async () => {
-    await store.zadd('parser2:abi:eosio', 100, '{"version":"eosio::abi/1.0"}')
-    expect(store.client.zadd).toHaveBeenCalledWith('parser2:abi:eosio', 100, '{"version":"eosio::abi/1.0"}')
+    await store.zadd('parser:abi:eosio', 100, '{"version":"eosio::abi/1.0"}')
+    expect(store.client.zadd).toHaveBeenCalledWith('parser:abi:eosio', 100, '{"version":"eosio::abi/1.0"}')
   })
 
   it('zrangeByscoreRev calls redis.zrevrangebyscore with max first, then min', async () => {
-    const result = await store.zrangeByscoreRev('parser2:abi:eosio', '250', '-inf')
+    const result = await store.zrangeByscoreRev('parser:abi:eosio', '250', '-inf')
     expect(result).toHaveLength(1)
-    expect(store.client.zrevrangebyscore).toHaveBeenCalledWith('parser2:abi:eosio', '250', '-inf', 'LIMIT', 0, 1)
+    expect(store.client.zrevrangebyscore).toHaveBeenCalledWith('parser:abi:eosio', '250', '-inf', 'LIMIT', 0, 1)
   })
 
   it('hset calls redis.hset with flattened args', async () => {
-    await store.hset('parser2:sync:mychain', { block_num: '100', block_id: 'abc' })
-    expect(store.client.hset).toHaveBeenCalledWith('parser2:sync:mychain', 'block_num', '100', 'block_id', 'abc')
+    await store.hset('parser:sync:mychain', { block_num: '100', block_id: 'abc' })
+    expect(store.client.hset).toHaveBeenCalledWith('parser:sync:mychain', 'block_num', '100', 'block_id', 'abc')
   })
 
   it('hget returns value', async () => {
-    const val = await store.hget('parser2:sync:mychain', 'block_num')
+    const val = await store.hget('parser:sync:mychain', 'block_num')
     expect(val).toBe('100')
   })
 

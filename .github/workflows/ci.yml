@@ -3,9 +3,8 @@ name: CI
 on:
   push:
     branches: [main, dev]
-    tags: ['v*']
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -88,7 +87,7 @@ jobs:
         run: |
           docker run -d --name blockchain \
             -p 8888:8888 -p 8080:8080 -p 9876:9876 \
-            -v "${GITHUB_WORKSPACE}/packages/parser2/test/integration/node-config:/mnt/dev/config" \
+            -v "${GITHUB_WORKSPACE}/packages/parser/test/integration/node-config:/mnt/dev/config" \
             dicoop/blockchain:v5.1.0-dev \
             /bin/bash -c '/usr/local/bin/nodeos -d /mnt/dev/data -p eosio --config-dir /mnt/dev/config --genesis-json /mnt/dev/config/genesis.json --disable-replay-opts'
           sleep 3
@@ -127,69 +126,3 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @coopenomics/coopos-ship-reader build
       - run: pnpm --filter @coopenomics/parser build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: packages/parser2/dist/
-
-  publish-npm:
-    name: Publish to npm
-    runs-on: ubuntu-22.04
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: '10' }
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v4
-        with: { name: dist, path: packages/parser2/dist/ }
-      - run: pnpm --filter @coopenomics/parser publish --no-git-checks --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  docker:
-    name: Build & push Docker image
-    runs-on: ubuntu-22.04
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      packages: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with: { name: dist, path: packages/parser2/dist/ }
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/coopenomics/parser
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
-      - uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64

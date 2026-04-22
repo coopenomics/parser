@@ -6,7 +6,7 @@
  * streams/locks и отслеживаем ack.
  *
  * Покрываем:
- *   - Регистрация подписки в parser2:subs
+ *   - Регистрация подписки в parser:subs
  *   - Определение startId по startFrom
  *   - Ожидание промотации если lock занят
  *   - Применение фильтров: не-matching события XACK'аются молча
@@ -185,7 +185,7 @@ describe('ParserClient — subscription registration', () => {
   beforeEach(() => { fakeRedisInstances.length = 0 })
   afterEach(() => { vi.clearAllMocks() })
 
-  it('registers subscription metadata in parser2:subs hash on stream() start', async () => {
+  it('registers subscription metadata in parser:subs hash on stream() start', async () => {
     const client = new ParserClient({
       subscriptionId: 'my-sub',
       filters: [{ kind: 'action', account: 'eosio.token' }],

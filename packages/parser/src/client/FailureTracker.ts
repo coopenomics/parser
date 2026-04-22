@@ -5,7 +5,7 @@
  * Вместо немедленного перевода в dead-letter даём несколько попыток (FAILURE_THRESHOLD = 3).
  * После FAILURE_THRESHOLD провалов событие переводится в dead-letter stream.
  *
- * Счётчики хранятся в Redis Hash (parser2:sub:<subId>:failures) с TTL 24 ч.
+ * Счётчики хранятся в Redis Hash (parser:sub:<subId>:failures) с TTL 24 ч.
  * TTL сбрасывается при каждом новом провале — чтобы не накапливать стали счётчики.
  *
  * Почему Redis, а не in-memory: при рестарте consumer'а незакрытые ошибки
@@ -61,7 +61,7 @@ export class FailureTracker {
 
   /**
    * Записывает событие в dead-letter stream с метаданными об ошибке.
-   * Dead-letter stream: ce:parser2:<chainId>:dead:<subId>
+   * Dead-letter stream: ce:parser:<chainId>:dead:<subId>
    * Поля записи: data (оригинальный payload), failureCount, lastError, subId.
    */
   async routeToDeadLetter(

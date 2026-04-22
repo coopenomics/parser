@@ -5,7 +5,7 @@
  * получать события из блокчейна без прямого доступа к Redis или SHiP.
  *
  * Что делает:
- *   1. Регистрирует подписку (метаданные) в Redis Hash (parser2:subs).
+ *   1. Регистрирует подписку (метаданные) в Redis Hash (parser:subs).
  *   2. Захватывает distributed lock (single-active-consumer) через SubscriptionLock.
  *   3. Читает события из Redis Stream через RedisConsumer (XREADGROUP).
  *   4. Применяет фильтры (matchFilters) — пропускает нерелевантные события.
@@ -74,7 +74,7 @@ export class ParserClient {
    *
    * Этапы старта:
    *   1. Подключаемся к Redis.
-   *   2. Регистрируем подписку в HSET parser2:subs.
+   *   2. Регистрируем подписку в HSET parser:subs.
    *   3. Пытаемся захватить lock; если занят — ждём освобождения.
    *   4. Определяем startId для consumer group.
    *   5. Создаём consumer group (XGROUP CREATE).

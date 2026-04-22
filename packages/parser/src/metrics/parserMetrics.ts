@@ -54,10 +54,10 @@ export interface ParserMetrics {
 /**
  * Создаёт набор парсерских метрик в изолированном Registry.
  *
- * @param prefix — префикс имён метрик. По умолчанию 'parser2'.
+ * @param prefix — префикс имён метрик. По умолчанию 'parser'.
  *   Меняется в тестах и при запуске нескольких инстансов.
  */
-export function createParserMetrics(prefix = 'parser2'): ParserMetrics {
+export function createParserMetrics(prefix = 'parser'): ParserMetrics {
   const registry = new Registry()
 
   const blocksProcessedTotal = new Counter({

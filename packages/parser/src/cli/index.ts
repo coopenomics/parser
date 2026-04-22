@@ -103,7 +103,7 @@ program
 
 /**
  * Команда `list-subscriptions`: показывает все зарегистрированные подписки.
- * Читает из parser2:subs HASH и объединяет с данными XINFO GROUPS.
+ * Читает из parser:subs HASH и объединяет с данными XINFO GROUPS.
  * Полезна для мониторинга: видно pending, lag и last-delivered-id каждой группы.
  */
 program
@@ -165,7 +165,7 @@ program
  * Команда `abi-prune`: удаляет устаревшие версии ABI из Redis ZSET.
  * Без периодической очистки активные контракты накапливают сотни версий.
  * --older-than <block> → удалить версии с block_num < этого значения.
- * --all-contracts      → SCAN по parser2:abi:* и применить к каждому контракту.
+ * --all-contracts      → SCAN по parser:abi:* и применить к каждому контракту.
  * --dry-run            → показать количество версий для удаления без изменений.
  */
 program
@@ -196,7 +196,7 @@ program
 
 /**
  * Команда `list-dead-letters`: инспектирует dead-letter stream(ы).
- * Dead-letter stream: ce:parser2:<chainId>:dead:<subId>
+ * Dead-letter stream: ce:parser:<chainId>:dead:<subId>
  * Содержит события которые handler не смог обработать 3 раза подряд.
  * --all    → сканировать все dead-letter стримы для цепи (SCAN dead:*).
  * --limit  → максимум записей за вызов (пагинация через --from).

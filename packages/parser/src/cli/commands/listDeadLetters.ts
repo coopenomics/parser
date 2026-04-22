@@ -3,14 +3,14 @@
  *
  * Выводит содержимое dead-letter stream(ов) в табличном или JSON формате.
  *
- * Dead-letter stream: ce:parser2:<chainId>:dead:<subId>
+ * Dead-letter stream: ce:parser:<chainId>:dead:<subId>
  * Каждая запись содержит поля:
  *   data        — оригинальный JSON ParserEvent
  *   failureCount — число провалов (обычно = FAILURE_THRESHOLD = 3)
  *   lastError   — текст последнего исключения
  *   subId       — идентификатор подписки-владельца
  *
- * Режим --all: сканирует Redis по паттерну ce:parser2:<chainId>:dead:*
+ * Режим --all: сканирует Redis по паттерну ce:parser:<chainId>:dead:*
  * и показывает все dead-letter стримы для цепи.
  *
  * Режим --json: выводит JSON-массив объектов с разобранными полями —
@@ -105,10 +105,10 @@ export async function listDeadLetters(
   let streams: Array<{ key: string; subId: string }> = []
 
   if (all) {
-    // SCAN по паттерну: ce:parser2:<chainId>:dead:*
+    // SCAN по паттерну: ce:parser:<chainId>:dead:*
     const pattern = RedisKeys.deadLetterStream(chainId, '*')
     const keys = await redis.scan(pattern)
-    const prefix = `ce:parser2:${chainId}:dead:`
+    const prefix = `ce:parser:${chainId}:dead:`
     streams = keys.map(k => ({ key: k, subId: k.slice(prefix.length) }))
     if (streams.length === 0) {
       console.log('No dead-letter streams found.')
