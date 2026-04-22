@@ -86,7 +86,7 @@ jobs:
         run: |
           docker run -d --name blockchain \
             -p 8888:8888 -p 8080:8080 -p 9876:9876 \
-            -v "${GITHUB_WORKSPACE}/packages/parser2/test/integration/node-config:/mnt/dev/config:ro" \
+            -v "${GITHUB_WORKSPACE}/packages/parser2/test/integration/node-config:/mnt/dev/config" \
             dicoop/blockchain:v5.1.0-dev \
             /bin/bash -c '/usr/local/bin/nodeos -d /mnt/dev/data -p eosio --config-dir /mnt/dev/config --genesis-json /mnt/dev/config/genesis.json --disable-replay-opts'
           sleep 3
