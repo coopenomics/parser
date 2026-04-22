@@ -204,6 +204,7 @@ pnpm changed
 # 3. Поднять версии интерактивно (Lerna сам предложит семвер по коммитам):
 pnpm release
 # → изменит packages/*/package.json, создаст тег(и), закоммитит + запушит
+# (локально можно также dry-run: pnpm release:version --no-push --no-git-tag-version)
 
 # 4. Смёрджить dev → main (обычным PR)
 # 5. GitHub Actions release.yml автоматически:

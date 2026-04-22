@@ -8,8 +8,8 @@
     "test": "pnpm -r test",
     "test:unit": "pnpm -r test:unit",
     "changed": "lerna changed",
-    "version": "lerna version --no-private",
-    "publish": "lerna publish from-package --yes --no-private",
+    "release:version": "lerna version --no-private",
+    "release:publish": "lerna publish from-package --yes --no-private",
     "release": "lerna version --no-private"
   },
   "devDependencies": {
