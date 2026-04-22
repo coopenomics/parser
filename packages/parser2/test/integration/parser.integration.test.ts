@@ -38,6 +38,9 @@ let parser: Parser
 let client: ParserClient
 let chain: ChainHelper
 let chainId: string
+// Общий keyPrefix для Parser и ParserClient — иначе читают/пишут разные Redis-ключи.
+// Уникальный timestamp за тест даёт чистый namespace при повторных запусках.
+const REDIS_PREFIX = `test-${Date.now()}:`
 
 /** Запускает parser.start() в фоне, возвращает chainId. */
 async function startParser(): Promise<string> {
@@ -46,7 +49,7 @@ async function startParser(): Promise<string> {
 
   parser = new Parser({
     ship: { url: SHIP_URL, timeoutMs: 15_000 },
-    redis: { url: REDIS_URL, keyPrefix: `test-${Date.now()}:` },
+    redis: { url: REDIS_URL, keyPrefix: REDIS_PREFIX },
     noSignalHandlers: true,
     xtrim: { enabled: false },
     reconnect: { maxAttempts: 3, backoffSeconds: [1, 2, 5] },
@@ -121,7 +124,7 @@ beforeAll(async () => {
     subscriptionId: 'integration-issue-test',
     filters: [{ kind: 'action', account: 'eosio.token', name: 'issue' }],
     startFrom: 'last_known',
-    redis: { url: REDIS_URL, keyPrefix: `test-${Date.now()}:` },
+    redis: { url: REDIS_URL, keyPrefix: REDIS_PREFIX },
     chain: { id: chainId },
     acquireLockTimeoutMs: 10_000,
     noSignalHandlers: true,
