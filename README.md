@@ -210,7 +210,7 @@ pnpm release
 # 5. GitHub Actions release.yml автоматически:
 #    • lerna publish from-package — опубликует в npm только пакеты с новой версией
 #    • changelogithub — создаст GitHub Release с changelog
-#    • docker build-push — опубликует образ в docker.io/coopenomics/parser:<version>
+#    • docker build-push — опубликует образ в docker.io/dicoop/parser:<version>
 ```
 
 Альтернативно, если lerna version не использовалась — можно вручную поднять версию в `packages/*/package.json`, смёрджить в main, и workflow опубликует.

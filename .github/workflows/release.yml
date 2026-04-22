@@ -10,7 +10,7 @@ name: Release
 # Если версия не менялась — workflow no-op (без ошибки).
 #
 # Требуемые secrets в настройках репозитория:
-#   DOCKERHUB_USERNAME — логин Docker Hub аккаунта-владельца coopenomics/parser
+#   DOCKERHUB_USERNAME — Docker Hub логин с доступом к организации dicoop
 #   DOCKERHUB_TOKEN    — PAT с правами Read,Write из hub.docker.com/settings/security
 #   GITHUB_TOKEN       — выдаётся автоматически GitHub Actions
 #
@@ -128,7 +128,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: coopenomics/parser
+          images: dicoop/parser
           tags: |
             type=semver,pattern={{version}},value=v${{ needs.release.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=v${{ needs.release.outputs.version }}
