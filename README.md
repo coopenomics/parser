@@ -116,6 +116,104 @@ parser replay-dead-letter --sub-id my-app --dl-id 1699999999999-0
 parser abi-prune --keep-last 10 --all-contracts
 ```
 
+## Docker
+
+Публичный образ: [`dicoop/parser`](https://hub.docker.com/r/dicoop/parser) — multi-arch (`linux/amd64`, `linux/arm64`).
+
+```bash
+docker pull dicoop/parser:latest
+# или конкретная версия
+docker pull dicoop/parser:1.0.1
+```
+
+### Минимальный запуск
+
+Парсер читает конфигурацию из YAML-файла, путь передаётся через `--config`:
+
+```bash
+docker run --rm \
+  -v $(pwd)/parser.config.yaml:/app/parser.config.yaml:ro \
+  --network host \
+  dicoop/parser:latest \
+  start --config /app/parser.config.yaml
+```
+
+### docker-compose.yml
+
+Полная конфигурация с Redis:
+
+```yaml
+services:
+  redis:
+    image: redis:7-alpine
+    command: >-
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+
+  parser:
+    image: dicoop/parser:1.0.1
+    depends_on:
+      - redis
+    volumes:
+      - ./parser.config.yaml:/app/parser.config.yaml:ro
+    command: ["start", "--config", "/app/parser.config.yaml"]
+    ports:
+      - "8081:8081"   # /health
+      - "9090:9090"   # /metrics (Prometheus)
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+```
+
+`parser.config.yaml` рядом с compose-файлом:
+
+```yaml
+ship:
+  url: ws://nodeos:8080
+  timeoutMs: 15000
+chain:
+  url: http://nodeos:8888
+redis:
+  url: redis://redis:6379
+abiFallback: rpc-current
+xtrim:
+  enabled: true
+  intervalMs: 60000
+reconnect:
+  maxAttempts: 10
+  backoffSeconds: [1, 2, 5, 10, 30, 60, 120, 300, 600, 1800]
+logger:
+  level: info
+  pretty: false     # для production — JSON logs в stdout
+health:
+  enabled: true
+  port: 8081
+metrics:
+  enabled: true
+  port: 9090
+irreversibleOnly: false    # читать head-блоки (false) или ждать last_irreversible (true)
+```
+
+Запуск: `docker compose up -d`. `/health` отдаст `200 OK` как только парсер подключился к SHiP, `/metrics` — экспорт для Prometheus.
+
+### Переопределение CLI-команды
+
+Контейнер по умолчанию запускает `parser start`, но можно использовать любую другую команду:
+
+```bash
+# Посмотреть подписки в прод-Redis
+docker run --rm --network host \
+  -e REDIS_URL=redis://localhost:6379 \
+  dicoop/parser:latest \
+  list-subscriptions
+```
+
 ## Архитектура
 
 ```
