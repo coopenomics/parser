@@ -99,22 +99,24 @@ function decodeVector<T>(data: Bytes | null, type: string, abi: ShipAbi): T[] {
 export function decodeStatusResult(raw: unknown): { chainId: string; head: BlockPosition; lastIrreversible: BlockPosition } {
   const r = raw as RawStatusResult
   return {
-    chainId: r.chain_id,
-    head: { blockNum: r.head.block_num, blockId: r.head.block_id },
-    lastIrreversible: { blockNum: r.last_irreversible.block_num, blockId: r.last_irreversible.block_id },
+    chainId: String(r.chain_id),
+    head: { blockNum: r.head.block_num, blockId: String(r.head.block_id) },
+    lastIrreversible: { blockNum: r.last_irreversible.block_num, blockId: String(r.last_irreversible.block_id) },
   }
 }
 
 export function decodeBlocksResult(raw: unknown, abi: ShipAbi, blockNum: number, blockId: string, blockTime: string): ShipBlock {
   const r = raw as RawBlocksResult
 
-  const head: BlockPosition = { blockNum: r.head.block_num, blockId: r.head.block_id }
-  const lastIrreversible: BlockPosition = { blockNum: r.last_irreversible.block_num, blockId: r.last_irreversible.block_id }
+  // ABI decoder возвращает checksum256 как Checksum256 объект (не строку) —
+  // принудительно конвертим в hex-строку для совместимости с downstream кодом.
+  const head: BlockPosition = { blockNum: r.head.block_num, blockId: String(r.head.block_id) }
+  const lastIrreversible: BlockPosition = { blockNum: r.last_irreversible.block_num, blockId: String(r.last_irreversible.block_id) }
   const thisBlock: BlockPosition = r.this_block
-    ? { blockNum: r.this_block.block_num, blockId: r.this_block.block_id }
-    : { blockNum: blockNum, blockId: blockId }
+    ? { blockNum: r.this_block.block_num, blockId: String(r.this_block.block_id) }
+    : { blockNum: blockNum, blockId: String(blockId) }
   const prevBlock: BlockPosition | null = r.prev_block
-    ? { blockNum: r.prev_block.block_num, blockId: r.prev_block.block_id }
+    ? { blockNum: r.prev_block.block_num, blockId: String(r.prev_block.block_id) }
     : null
 
   const txTraces = decodeVector<[string, RawTransactionTrace]>(r.traces, 'transaction_trace', abi)
