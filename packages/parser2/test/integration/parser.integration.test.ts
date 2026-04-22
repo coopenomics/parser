@@ -55,7 +55,7 @@ async function startParser(): Promise<string> {
     reconnect: { maxAttempts: 3, backoffSeconds: [1, 2, 5] },
     abiFallback: 'rpc-current',
     chain: { url: CHAIN_URL },
-    logger: { level: 'info' }, // для диагностики integration тестов
+    logger: { level: 'warn' },
   })
 
   // Перехватываем chainId после connect через отдельный запрос
@@ -63,10 +63,10 @@ async function startParser(): Promise<string> {
   const info = await infoRes.json() as { chain_id: string }
   resolveChainId(info.chain_id)
 
-  // Стартуем парсер асинхронно (он блокирует пока не остановлен)
+  // Стартуем парсер асинхронно (он блокирует пока не остановлен).
+  // Ошибки важны для диагностики — afterAll() остановит парсер штатно.
   parser.start().catch(err => {
-    // Логируем ошибки парсера — иначе не увидим их в тесте
-    console.error('  → Parser.start() failed:', err)
+    console.error('[test] Parser.start() failed:', err)
   })
 
   // Ждём пока парсер начнёт читать блоки (подключится к SHiP)
@@ -148,17 +148,13 @@ afterAll(async () => {
 describe('eosio.token::issue', () => {
   it('parser captures issue event and client receives it', async () => {
     // Собираем событие через AsyncGenerator в фоне
-    const receivedEvents: ParserEvent[] = []
     const eventReceived = new Promise<ParserEvent>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        console.log(`  → Timeout reached, received ${receivedEvents.length} events: ${JSON.stringify(receivedEvents.map(e => e.kind))}`)
-        reject(new Error(`Timeout: event not received in 40s (got ${receivedEvents.length} events)`))
-      }, 40_000)
-
+      const timeout = setTimeout(
+        () => reject(new Error('Timeout: event not received in 20s')),
+        20_000,
+      )
       async function consume(): Promise<void> {
         for await (const event of client.stream()) {
-          console.log(`  → Received event: kind=${event.kind}`)
-          receivedEvents.push(event)
           if (event.kind === 'action') {
             clearTimeout(timeout)
             resolve(event)
@@ -166,17 +162,13 @@ describe('eosio.token::issue', () => {
           }
         }
       }
-      consume().catch(err => {
-        console.error('  → consume() error:', err)
-        reject(err)
-      })
+      consume().catch(reject)
     })
 
     // Небольшая пауза чтобы consumer group создалась и начала читать
-    await sleep(3000)
+    await sleep(2000)
 
     // Выполняем issue — выпуск дополнительных токенов eosio.token::issue
-    console.log('  → Pushing eosio.token::issue...')
     await chain.pushActions([
       {
         account: 'eosio.token',
@@ -189,7 +181,6 @@ describe('eosio.token::issue', () => {
         },
       },
     ])
-    console.log('  → Issue pushed, waiting for event...')
 
     // Ждём события
     const event = await eventReceived
@@ -205,5 +196,5 @@ describe('eosio.token::issue', () => {
         memo: 'integration-test-issue',
       })
     }
-  }, 60_000)
+  }, 30_000)
 })
