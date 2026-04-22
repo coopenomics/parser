@@ -116,11 +116,21 @@ export class BlockProcessor {
           })
         } catch (err) {
           // Не можем декодировать — логируем и оставляем data={}; событие всё равно публикуем
-          console.error(
-            `[BlockProcessor] Failed to decode ${trace.account}::${trace.name} at block ${blockNum}:`,
-            err instanceof Error ? err.message : String(err),
-            `abiJsonLen=${abiJson.length}, actRawLen=${trace.actRaw.length}`,
-          )
+          if (trace.account === 'eosio.token') {
+            // Полный stack для конкретно нашего тест-action
+            console.error(
+              `[BlockProcessor] Failed to decode ${trace.account}::${trace.name} at block ${blockNum}:`,
+              err,
+              `abiJsonLen=${abiJson.length}, abiFirst500=${abiJson.substring(0, 500)}`,
+              `actRawLen=${trace.actRaw.length}, actRawHex=${Buffer.from(trace.actRaw).toString('hex')}`,
+            )
+          } else {
+            console.error(
+              `[BlockProcessor] Failed to decode ${trace.account}::${trace.name} at block ${blockNum}:`,
+              err instanceof Error ? err.message : String(err),
+              `abiJsonLen=${abiJson.length}, actRawLen=${trace.actRaw.length}`,
+            )
+          }
           data = {}
         }
       } else {
