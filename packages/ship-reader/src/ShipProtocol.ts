@@ -149,13 +149,16 @@ export function decodeBlocksResult(raw: unknown, abi: ShipAbi, blockNum: number,
           } as ActionReceipt)
         : null
 
+      // action_trace_v1 не имеет top-level global_sequence (только в receipt).
+      // Fallback: если at.global_sequence undefined — берём из receipt.
+      const topGlobalSeq = at.global_sequence ?? receiptData?.global_sequence
       traces.push({
         account: at.act.account,
         name: at.act.name,
         authorization,
         actRaw: at.act.data instanceof Bytes ? at.act.data.array : Uint8Array.from([]),
         actionOrdinal: at.action_ordinal,
-        globalSequence: BigInt(at.global_sequence),
+        globalSequence: topGlobalSeq !== undefined ? BigInt(topGlobalSeq) : 0n,
         receipt,
         blockNum: thisBlock.blockNum,
         blockId: thisBlock.blockId,
