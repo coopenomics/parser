@@ -68,12 +68,16 @@ jobs:
           pnpm --filter @coopenomics/coopos-ship-reader build
           pnpm --filter @coopenomics/parser build
 
-      - name: Publish to npm
+      # Настраиваем npm auth для lerna/pnpm: NODE_AUTH_TOKEN из setup-node
+      # уже прописывает _authToken в .npmrc, но lerna внутри читает из npm cli,
+      # поэтому дублируем через env NPM_TOKEN → npm_config_//registry.npmjs.org/:_authToken.
+      - name: Publish via Lerna (from-package)
         if: steps.ver.outputs.released == 'true'
-        run: pnpm -r publish --access public --no-git-checks
+        run: pnpm exec lerna publish from-package --yes --no-private
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag release
         if: steps.ver.outputs.released == 'true'

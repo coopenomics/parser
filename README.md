@@ -191,17 +191,28 @@ pnpm --filter @coopenomics/coopos-ship-reader bench
 
 ### Ветки и релизы
 
-- `dev` — рабочая ветка разработки; любой push сюда запускает CI (lint, typecheck, unit, integration, build)
-- `main` — релизная ветка; merge из `dev` автоматически публикует новую версию если `packages/parser/package.json` содержит новую версию
+- `dev` — рабочая ветка разработки; push / PR сюда запускает CI (lint, typecheck, unit, integration, build)
+- `main` — релизная ветка; merge из `dev` автоматически публикует через Lerna
 
-Процесс релиза:
-1. Сделать PR из `dev` в `main`
-2. Поднять версию в `packages/parser/package.json` (и/или `packages/ship-reader/package.json`)
-3. Смёрджить PR
-4. GitHub Actions `release.yml` автоматически:
-   - опубликует обновлённые пакеты в npm (`pnpm -r publish` пропускает пакеты с неизменной версией)
-   - создаст тег `v<version>` и GitHub Release с changelog из коммитов
-   - соберёт и опубликует Docker образ в `ghcr.io/coopenomics/parser:<version>`
+Процесс релиза через Lerna (independent versioning):
+
+```bash
+# 1. В dev сделать изменения, закоммитить через blago flow
+# 2. Посмотреть какие пакеты будут опубликованы:
+pnpm changed
+
+# 3. Поднять версии интерактивно (Lerna сам предложит семвер по коммитам):
+pnpm release
+# → изменит packages/*/package.json, создаст тег(и), закоммитит + запушит
+
+# 4. Смёрджить dev → main (обычным PR)
+# 5. GitHub Actions release.yml автоматически:
+#    • lerna publish from-package — опубликует в npm только пакеты с новой версией
+#    • changelogithub — создаст GitHub Release с changelog
+#    • docker build-push — опубликует образ в ghcr.io/coopenomics/parser:<version>
+```
+
+Альтернативно, если lerna version не использовалась — можно вручную поднять версию в `packages/*/package.json`, смёрджить в main, и workflow опубликует.
 
 ## Лицензия
 

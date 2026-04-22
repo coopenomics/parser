@@ -7,10 +7,13 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "test:unit": "pnpm -r test:unit",
-    "changeset": "changeset"
+    "changed": "lerna changed",
+    "version": "lerna version --no-private",
+    "publish": "lerna publish from-package --yes --no-private",
+    "release": "lerna version --no-private"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.1",
+    "lerna": "^9.0.7",
     "typescript": "^5.4.5"
   }
 }
