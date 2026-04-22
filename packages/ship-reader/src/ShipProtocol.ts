@@ -133,14 +133,19 @@ export function decodeBlocksResult(raw: unknown, abi: ShipAbi, blockNum: number,
         permission: a.permission,
       }))
 
-      const receipt: ActionReceipt | null = at.receipt
+      // at.receipt может быть variant-tuple [variantName, data] (wharfkit decode variant)
+      // или уже развёрнутым объектом. Обрабатываем оба случая.
+      const receiptData = Array.isArray(at.receipt)
+        ? (at.receipt[1] as RawActionTrace['receipt'])
+        : at.receipt
+      const receipt: ActionReceipt | null = receiptData
         ? ({
-            receiver: at.receipt.receiver,
-            actDigest: at.receipt.act_digest,
-            globalSequence: BigInt(at.receipt.global_sequence),
-            recvSequence: BigInt(at.receipt.recv_sequence),
-            codeSequence: at.receipt.code_sequence,
-            abiSequence: at.receipt.abi_sequence,
+            receiver: receiptData.receiver,
+            actDigest: receiptData.act_digest,
+            globalSequence: BigInt(receiptData.global_sequence),
+            recvSequence: BigInt(receiptData.recv_sequence),
+            codeSequence: receiptData.code_sequence,
+            abiSequence: receiptData.abi_sequence,
           } as ActionReceipt)
         : null
 
