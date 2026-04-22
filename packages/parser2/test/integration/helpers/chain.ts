@@ -177,6 +177,11 @@ export class ChainHelper {
   /**
    * Выполняет произвольный набор actions в одной транзакции.
    * Используется для eosio.token::create, issue, transfer и т.д.
+   *
+   * Сериализация данных происходит локально через @wharfkit/antelope:
+   *   - для eosio::* действий используется встроенный EOSIO_ABI
+   *   - для действий на контрактах — ABI загружается через /v1/chain/get_abi
+   * Это нужно потому что /v1/chain/abi_json_to_bin был удалён в LEAP 5.x.
    */
   async pushActions(actions: Array<{
     account: string
@@ -188,8 +193,6 @@ export class ChainHelper {
     const info = await this.client.v1.chain.get_info()
     const header = info.getTransactionHeader(60) // expiration = now + 60s
 
-    // Строим Action объекты с данными как bytes через JSON API endpoint
-    // Используем get_required_keys + serialize через API для надёжности
     const serializedActions: Action[] = []
     for (const a of actions) {
       const [authAccount, authPerm] = a.auth.split('@')
@@ -197,8 +200,7 @@ export class ChainHelper {
         account: Name.from(a.account),
         name: Name.from(a.name),
         authorization: [PermissionLevel.from({ actor: authAccount ?? a.account, permission: authPerm ?? 'active' })],
-        // Данные кодируем через API endpoint abi_json_to_bin
-        data: await this.abiJsonToBin(a.account, a.name, a.data),
+        data: await this.serializeActionData(a.account, a.name, a.data),
       })
       serializedActions.push(action)
     }
@@ -225,27 +227,138 @@ export class ChainHelper {
     await this.client.v1.chain.push_transaction(signed)
   }
 
+  /** Кеш ABI контрактов — экономим запросы к get_abi. */
+  private abiCache = new Map<string, ABI>()
+
   /**
-   * Сериализует action data в hex через Chain API /v1/chain/abi_json_to_bin.
-   * Это надёжнее чем ручная сериализация — нода сама знает ABI.
+   * Сериализует JSON-объект data в bytes согласно ABI action.
+   * Для eosio использует встроенный EOSIO_ABI (до деплоя собственного контракта).
+   * Для остальных контрактов — запрашивает ABI через /v1/chain/get_abi.
    */
-  private async abiJsonToBin(
+  private async serializeActionData(
     code: string,
     action: string,
     args: Record<string, unknown>,
   ): Promise<Bytes> {
-    const res = await fetch(`${this.chainUrl}/v1/chain/abi_json_to_bin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, action, args }),
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      throw new Error(`abi_json_to_bin(${code}::${action}) failed: ${text}`)
+    let abi: ABI
+    if (code === 'eosio') {
+      // До деплоя eosio.boot/eosio.system аккаунт eosio не имеет ABI в chain.
+      // Используем встроенную ABI с описанием нативных системных action'ов.
+      abi = ABI.from(EOSIO_SYSTEM_ABI)
+    } else {
+      const cached = this.abiCache.get(code)
+      if (cached) {
+        abi = cached
+      } else {
+        const res = await this.client.v1.chain.get_abi(code)
+        if (!res.abi) throw new Error(`No ABI for contract ${code}`)
+        abi = ABI.from(res.abi)
+        this.abiCache.set(code, abi)
+      }
     }
-    const { binargs } = await res.json() as { binargs: string }
-    return Bytes.from(binargs, 'hex')
+
+    const encoded = Serializer.encode({ object: args, abi, type: action })
+    return Bytes.from(encoded.array)
   }
+}
+
+/**
+ * Минимальный ABI для нативных системных action'ов eosio.
+ * Используется до деплоя eosio.boot (когда chain ещё не имеет ABI для eosio).
+ * Структура action'ов идентична определению в eosio.boot.abi.
+ */
+const EOSIO_SYSTEM_ABI = {
+  version: 'eosio::abi/1.2',
+  types: [],
+  structs: [
+    {
+      name: 'key_weight',
+      base: '',
+      fields: [
+        { name: 'key', type: 'public_key' },
+        { name: 'weight', type: 'uint16' },
+      ],
+    },
+    {
+      name: 'permission_level',
+      base: '',
+      fields: [
+        { name: 'actor', type: 'name' },
+        { name: 'permission', type: 'name' },
+      ],
+    },
+    {
+      name: 'permission_level_weight',
+      base: '',
+      fields: [
+        { name: 'permission', type: 'permission_level' },
+        { name: 'weight', type: 'uint16' },
+      ],
+    },
+    {
+      name: 'wait_weight',
+      base: '',
+      fields: [
+        { name: 'wait_sec', type: 'uint32' },
+        { name: 'weight', type: 'uint16' },
+      ],
+    },
+    {
+      name: 'authority',
+      base: '',
+      fields: [
+        { name: 'threshold', type: 'uint32' },
+        { name: 'keys', type: 'key_weight[]' },
+        { name: 'accounts', type: 'permission_level_weight[]' },
+        { name: 'waits', type: 'wait_weight[]' },
+      ],
+    },
+    {
+      name: 'newaccount',
+      base: '',
+      fields: [
+        { name: 'creator', type: 'name' },
+        { name: 'name', type: 'name' },
+        { name: 'owner', type: 'authority' },
+        { name: 'active', type: 'authority' },
+      ],
+    },
+    {
+      name: 'setcode',
+      base: '',
+      fields: [
+        { name: 'account', type: 'name' },
+        { name: 'vmtype', type: 'uint8' },
+        { name: 'vmversion', type: 'uint8' },
+        { name: 'code', type: 'bytes' },
+      ],
+    },
+    {
+      name: 'setabi',
+      base: '',
+      fields: [
+        { name: 'account', type: 'name' },
+        { name: 'abi', type: 'bytes' },
+      ],
+    },
+    {
+      name: 'activate',
+      base: '',
+      fields: [
+        { name: 'feature_digest', type: 'checksum256' },
+      ],
+    },
+  ],
+  actions: [
+    { name: 'newaccount', type: 'newaccount', ricardian_contract: '' },
+    { name: 'setcode', type: 'setcode', ricardian_contract: '' },
+    { name: 'setabi', type: 'setabi', ricardian_contract: '' },
+    { name: 'activate', type: 'activate', ricardian_contract: '' },
+  ],
+  tables: [],
+  ricardian_clauses: [],
+  error_messages: [],
+  abi_extensions: [],
 }
 
 /** Утилита: ждём пока Chain API станет доступным. */
