@@ -33,7 +33,7 @@ interface IRedisClient {
   xgroup(action: string, stream: string, group: string, id: string, mkstream?: string): Promise<unknown>
   xinfo(subcommand: string, key: string): Promise<unknown>
   xreadgroup(
-    group: string, groupName: string, consumer: string, consumerName: string,
+    group: string, groupName: string, consumerName: string,
     count: string, countVal: number,
     block: string, blockMs: number,
     streams: string, stream: string, id: string,
@@ -206,7 +206,7 @@ export class IoRedisStore implements RedisStore {
     id: string,
   ): Promise<StreamMessage[]> {
     const result = await this.client.xreadgroup(
-      'GROUP', group, consumer, consumer,
+      'GROUP', group, consumer,
       'COUNT', count,
       'BLOCK', blockMs,
       'STREAMS', stream, id,

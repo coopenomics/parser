@@ -114,10 +114,12 @@ beforeAll(async () => {
   chainId = await startParser()
   console.log(`  → Parser connected, chainId: ${chainId.slice(0, 16)}...`)
 
-  // === Шаг 4: Создаём ParserClient подписанный на eosio.token::transfer ===
+  // === Шаг 4: Создаём ParserClient подписанный на eosio.token::issue ===
+  // NB: transfer заблокирован coopenomics-fork'ом eosio.token (требует членства
+  // получателя в wallet program). issue свободен от этой проверки.
   client = new ParserClient({
-    subscriptionId: 'integration-transfer-test',
-    filters: [{ kind: 'action', account: 'eosio.token', name: 'transfer' }],
+    subscriptionId: 'integration-issue-test',
+    filters: [{ kind: 'action', account: 'eosio.token', name: 'issue' }],
     startFrom: 'last_known',
     redis: { url: REDIS_URL, keyPrefix: `test-${Date.now()}:` },
     chain: { id: chainId },
@@ -131,8 +133,8 @@ afterAll(async () => {
   await parser?.stop()
 })
 
-describe('eosio.token::transfer', () => {
-  it('parser captures transfer event and client receives it', async () => {
+describe('eosio.token::issue', () => {
+  it('parser captures issue event and client receives it', async () => {
     // Собираем событие через AsyncGenerator в фоне
     const receivedEvents: ParserEvent[] = []
     const eventReceived = new Promise<ParserEvent>((resolve, reject) => {
@@ -154,18 +156,17 @@ describe('eosio.token::transfer', () => {
     // Небольшая пауза чтобы consumer group создалась и начала читать
     await sleep(2000)
 
-    // Выполняем transfer eosio → eosio.token
-    console.log('  → Pushing eosio.token::transfer...')
+    // Выполняем issue — выпуск дополнительных токенов eosio.token::issue
+    console.log('  → Pushing eosio.token::issue...')
     await chain.pushActions([
       {
         account: 'eosio.token',
-        name: 'transfer',
+        name: 'issue',
         auth: 'eosio@active',
         data: {
-          from: 'eosio',
-          to: 'eosio.token',
-          quantity: '1.0000 AXON',
-          memo: 'integration-test',
+          to: 'eosio',
+          quantity: '5.0000 AXON',
+          memo: 'integration-test-issue',
         },
       },
     ])
@@ -177,12 +178,11 @@ describe('eosio.token::transfer', () => {
     expect(event.kind).toBe('action')
     if (event.kind === 'action') {
       expect(event.account).toBe('eosio.token')
-      expect(event.name).toBe('transfer')
+      expect(event.name).toBe('issue')
       expect(event.data).toMatchObject({
-        from: 'eosio',
-        to: 'eosio.token',
-        quantity: '1.0000 AXON',
-        memo: 'integration-test',
+        to: 'eosio',
+        quantity: '5.0000 AXON',
+        memo: 'integration-test-issue',
       })
     }
   }, 30_000)
