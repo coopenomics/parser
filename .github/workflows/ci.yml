@@ -79,6 +79,8 @@ jobs:
         with: { node-version: '20', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @coopenomics/coopos-ship-reader build
+      # Parser2 build: нужен dist/deserialize.worker.cjs для Piscina worker pool
+      - run: pnpm --filter @coopenomics/parser build
       # Запускаем nodeos вручную через docker run: образ dicoop/blockchain:v5.1.0-dev
       # не имеет CMD по умолчанию, и GitHub Actions services: не поддерживает
       # передачу команды контейнеру. Монтируем config.ini (SHiP на 8080) и genesis.json.

@@ -4,18 +4,49 @@
  * Использует Piscina — высокопроизводительный worker pool для Node.js.
  * Каждый worker держит собственный in-memory ABI-кэш, поэтому повторные
  * задания с одним и тем же abiJson не перепарсивают его.
- *
- * Важно: Piscina загружается через динамический import() из-за отсутствия
- * поля "exports" в package.json пакета — NodeNext resolution требует его.
- * Поэтому используется топ-левел await + явное приведение типа.
  */
 
+// Piscina: default import через dynamic import() — TS не может статически
+// проверить тип, поэтому используем топ-левел await + приведение типа.
+type PiscinaPool = {
+  run(task: unknown): Promise<unknown>
+  utilization: number
+  destroy(): Promise<void>
+}
+type PiscinaCtor = new (opts: { filename: string; maxThreads?: number }) => PiscinaPool
+const { default: PiscinaClass } = await import('piscina') as unknown as { default: PiscinaCtor }
 import { fileURLToPath } from 'node:url'
-import { join, dirname } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
+import { existsSync } from 'node:fs'
 
 // __dirname не доступен в ESM — восстанавливаем через import.meta.url
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+/**
+ * Находит путь к скомпилированному worker'у.
+ *
+ * Сценарии:
+ *   1. Production (dist/index.cjs) — worker рядом: dist/deserialize.worker.cjs
+ *   2. Source mode (src/workers/WorkerPool.ts) — worker должен быть предварительно
+ *      собран в dist/workers/deserialize.worker.cjs (для тестов: build перед test:integration)
+ */
+function resolveWorkerPath(): string {
+  const candidates = [
+    // Production: рядом с WorkerPool
+    join(__dirname, 'deserialize.worker.cjs'),
+    // Source mode (tests): относительный путь к dist/
+    resolve(__dirname, '../../dist/deserialize.worker.cjs'),
+    resolve(__dirname, '../../dist/workers/deserialize.worker.cjs'),
+  ]
+  for (const path of candidates) {
+    if (existsSync(path)) return path
+  }
+  throw new Error(
+    `Could not find deserialize.worker.cjs. Tried: ${candidates.join(', ')}. ` +
+    `Run "pnpm build" first if running from source.`,
+  )
+}
 
 export interface DeserializeTask {
   /** Сырые байты action data или table row для декодирования. */
@@ -28,22 +59,8 @@ export interface DeserializeTask {
   kind: 'action' | 'delta'
 }
 
-interface PiscinaOptions {
-  filename: string
-  maxThreads?: number
-}
-
-// CJS/ESM interop: у Piscina нет поля "exports" для NodeNext resolution,
-// поэтому TypeScript не может статически проверить тип импорта
-type PiscinaConstructor = new (opts: PiscinaOptions) => {
-  run(task: unknown): Promise<unknown>
-  utilization: number
-  destroy(): Promise<void>
-}
-const { default: PiscinaClass } = await import('piscina') as unknown as { default: PiscinaConstructor }
-
 export class WorkerPool {
-  private pool: InstanceType<PiscinaConstructor>
+  private pool: PiscinaPool
 
   /**
    * @param maxThreads — максимум параллельных worker-потоков.
@@ -53,7 +70,7 @@ export class WorkerPool {
   constructor(maxThreads = 2) {
     // Загружаем CJS-сборку worker'а, т.к. Piscina нативно работает с CJS
     this.pool = new PiscinaClass({
-      filename: join(__dirname, 'deserialize.worker.cjs'),
+      filename: resolveWorkerPath(),
       maxThreads,
     })
   }
