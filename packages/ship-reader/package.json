@@ -25,6 +25,9 @@
     "NOTICE",
     "LICENSE-THIRD-PARTY.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "lint": "eslint src --ext .ts",
