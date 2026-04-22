@@ -6,12 +6,16 @@ name: Release
 #   1. Публикуем workspace-пакеты в npm
 #   2. Создаём git-тег v<version> и пушим его
 #   3. Создаём GitHub Release с changelog'ом (changelogithub)
-#   4. Собираем и пушим Docker-образ в ghcr.io
+#   4. Собираем и пушим Docker-образ в docker.io (Docker Hub)
 # Если версия не менялась — workflow no-op (без ошибки).
 #
 # Требуемые secrets в настройках репозитория:
-#   NPM_TOKEN — automation token npm организации @coopenomics
-#   GITHUB_TOKEN — выдаётся автоматически GitHub Actions
+#   DOCKERHUB_USERNAME — логин Docker Hub аккаунта-владельца coopenomics/parser
+#   DOCKERHUB_TOKEN    — PAT с правами Read,Write из hub.docker.com/settings/security
+#   GITHUB_TOKEN       — выдаётся автоматически GitHub Actions
+#
+# npm publish работает через trusted publishing (OIDC) — токен не нужен:
+# настраивается на стороне npm через Trusted Publisher: GitHub Actions.
 
 on:
   push:
@@ -23,9 +27,7 @@ concurrency:
 
 permissions:
   contents: write   # tag + GitHub Release
-  packages: write   # push ghcr.io image
-  # id-token: write — выключено: включить обратно после первого успешного
-  # publish (sigstore provenance требует что пакет уже существует в npm).
+  id-token: write   # npm trusted publishing (OIDC) + sigstore provenance
 
 jobs:
   release:
@@ -72,13 +74,16 @@ jobs:
       # Настраиваем npm auth для lerna/pnpm: NODE_AUTH_TOKEN из setup-node
       # уже прописывает _authToken в .npmrc, но lerna внутри читает из npm cli,
       # поэтому дублируем через env NPM_TOKEN → npm_config_//registry.npmjs.org/:_authToken.
-      # Provenance и id-token явно выключены до первого успешного publish
+      # npm trusted publishing: OIDC через id-token: write, без NPM_TOKEN.
+      # Настраивается на стороне npm: packages/coopenomics-parser/settings/access
+      # → Trusted Publisher → GitHub Actions (repo=coopenomics/parser,
+      # workflow=.github/workflows/release.yml, environment="").
+      # Provenance включён — sigstore подпишет каждый publish.
       - name: Publish via Lerna (from-package)
         if: steps.ver.outputs.released == 'true'
         run: pnpm exec lerna publish from-package --yes --no-private
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: false
+          NPM_CONFIG_PROVENANCE: true
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag release
@@ -113,16 +118,17 @@ jobs:
       - run: pnpm --filter @coopenomics/parser build
 
       - uses: docker/setup-buildx-action@v3
+      # Docker Hub auth: требует secrets DOCKERHUB_USERNAME + DOCKERHUB_TOKEN
+      # (Access Token из hub.docker.com/settings/security с правами Read,Write)
       - uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/coopenomics/parser
+          images: coopenomics/parser
           tags: |
             type=semver,pattern={{version}},value=v${{ needs.release.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=v${{ needs.release.outputs.version }}
