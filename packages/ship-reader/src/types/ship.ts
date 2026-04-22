@@ -93,5 +93,4 @@ export interface GetBlocksOptions {
 export interface ShipClientOptions {
   readonly ship: { readonly url: string; readonly timeoutMs?: number }
   readonly chain?: { readonly url: string }
-  readonly deserializer?: 'wharfkit' | 'abieos'
 }

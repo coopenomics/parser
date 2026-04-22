@@ -33,21 +33,21 @@ for await (const block of client.streamBlocks({ startBlock: 1, fetchTraces: true
 
 ## Performance
 
-By default wharfkit deserialization is used (pure JS, works everywhere).
+Deserialization uses `@wharfkit/antelope` (pure JS, cross-platform).
 
-For 10× faster deserialization on Linux install the optional native module:
+Throughput on real-world payloads (Ubuntu 24.04, Node 22):
+
+| Scenario                              | Throughput  |
+|---------------------------------------|-------------|
+| transfer (short memo)                 | ~22k ops/s  |
+| transfer (256-char memo)              | ~21k ops/s  |
+| updateauth (nested struct)            | ~9.5k ops/s |
+| contract_row (accounts)               | ~34k ops/s  |
+
+Baseline for regression tracking — run locally:
 
 ```bash
-pnpm add @eosrio/node-abieos
-```
-
-Then configure:
-
-```typescript
-const client = new ShipClient({
-  ship: { url: '...' },
-  deserializer: 'abieos',   // falls back to wharfkit if not available
-})
+pnpm --filter @coopenomics/coopos-ship-reader bench
 ```
 
 ## License

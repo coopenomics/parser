@@ -42,8 +42,8 @@ export interface ParserOptions {
   xtrim?: { intervalMs?: number; enabled?: boolean }
   /** ReconnectSupervisor: максимум попыток и backoff-таблица в секундах. */
   reconnect?: { maxAttempts?: number; backoffSeconds?: number[] }
-  /** Десериализатор ABI-данных. По умолчанию 'wharfkit'. */
-  deserializer?: 'wharfkit' | 'abieos'
+  /** Десериализатор ABI-данных. Единственный вариант — 'wharfkit'. */
+  deserializer?: 'wharfkit'
   /** Pino logger настройки. pretty=true включает pino-pretty (для разработки). */
   logger?: { level?: string; pretty?: boolean }
   /** HTTP /health endpoint. Kubernetes liveness/readiness probe. */
@@ -122,8 +122,8 @@ function validate(raw: unknown): raw is ParserOptions {
     errors.push('abiFallback must be "rpc-current" or "fail"')
   }
   const deserializer = raw['deserializer']
-  if (deserializer !== undefined && deserializer !== 'wharfkit' && deserializer !== 'abieos') {
-    errors.push('deserializer must be "wharfkit" or "abieos"')
+  if (deserializer !== undefined && deserializer !== 'wharfkit') {
+    errors.push('deserializer must be "wharfkit"')
   }
   if (errors.length > 0) {
     throw new ConfigValidationError(`Config validation failed: ${errors.join('; ')}`)

@@ -102,13 +102,12 @@ export const configSchema = {
       additionalProperties: false,
     },
     /**
-     * Движок десериализации ABI-данных из SHiP:
-     *   wharfkit — @wharfkit/antelope (pure JS, работает везде).
-     *   abieos   — нативный C++ bindings (быстрее, но требует компиляции).
+     * Движок десериализации ABI-данных из SHiP.
+     * Поддерживается только `wharfkit` (@wharfkit/antelope, pure JS).
      */
     deserializer: {
       type: 'string',
-      enum: ['wharfkit', 'abieos'],
+      enum: ['wharfkit'],
       default: 'wharfkit',
     },
     /** Pino структурированный логгер. */

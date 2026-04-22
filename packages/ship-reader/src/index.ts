@@ -1,6 +1,5 @@
 export { ShipClient } from './ShipClient.js'
 export { WharfkitDeserializer } from './deserializers/WharfkitDeserializer.js'
-export { AbieosDeserializer, createDeserializer } from './deserializers/AbieosDeserializer.js'
 export { filterNativeDeltas, streamNativeDeltas } from './NativeRowStream.js'
 export { getChainInfo, getRawAbi } from './rpc.js'
 export {

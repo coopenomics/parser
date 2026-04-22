@@ -6,5 +6,5 @@ export interface Deserializer {
   deserializeAction<T = Record<string, unknown>>(trace: ShipTrace, abi: ABI): Action<T>
   deserializeContractRow<T = Record<string, unknown>>(delta: ShipDelta, abi: ABI): Delta<T>
   deserializeNativeDelta<T = Record<string, unknown>>(delta: ShipDelta): NativeDeltaEvent<T>
-  readonly name: 'wharfkit' | 'abieos'
+  readonly name: 'wharfkit'
 }

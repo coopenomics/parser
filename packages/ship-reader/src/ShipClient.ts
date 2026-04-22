@@ -2,7 +2,7 @@ import WebSocket from 'ws'
 import { parseShipAbi, encodeRequest, decodeResult, decodeStatusResult } from './ShipProtocol.js'
 import type { ShipAbi } from './ShipProtocol.js'
 import { createBlockStream } from './BlockStream.js'
-import { createDeserializer } from './deserializers/AbieosDeserializer.js'
+import { WharfkitDeserializer } from './deserializers/WharfkitDeserializer.js'
 import { getChainInfo as rpcGetChainInfo, getRawAbi as rpcGetRawAbi } from './rpc.js'
 import { ShipConnectionError } from './errors.js'
 import type { ShipBlock, ShipClientOptions, GetBlocksOptions, ChainInfo, BlockPosition } from './types/ship.js'
@@ -18,7 +18,7 @@ export class ShipClient {
   readonly deserializer: Deserializer
 
   constructor(private readonly opts: ShipClientOptions) {
-    this.deserializer = createDeserializer(opts.deserializer ?? 'wharfkit')
+    this.deserializer = new WharfkitDeserializer()
   }
 
   async connect(): Promise<void> {
