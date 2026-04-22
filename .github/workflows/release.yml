@@ -24,7 +24,8 @@ concurrency:
 permissions:
   contents: write   # tag + GitHub Release
   packages: write   # push ghcr.io image
-  id-token: write   # npm provenance
+  # id-token: write — выключено: включить обратно после первого успешного
+  # publish (sigstore provenance требует что пакет уже существует в npm).
 
 jobs:
   release:
@@ -71,13 +72,13 @@ jobs:
       # Настраиваем npm auth для lerna/pnpm: NODE_AUTH_TOKEN из setup-node
       # уже прописывает _authToken в .npmrc, но lerna внутри читает из npm cli,
       # поэтому дублируем через env NPM_TOKEN → npm_config_//registry.npmjs.org/:_authToken.
-      # Provenance выключен: требует чтобы пакет уже существовал и поддерживал
-      # sigstore attestation. Включим после первого успешного publish.
+      # Provenance и id-token явно выключены до первого успешного publish
       - name: Publish via Lerna (from-package)
         if: steps.ver.outputs.released == 'true'
         run: pnpm exec lerna publish from-package --yes --no-private
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag release
