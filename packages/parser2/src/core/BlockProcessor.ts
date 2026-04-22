@@ -112,10 +112,19 @@ export class BlockProcessor {
             typeName: trace.name,
             kind: 'action',
           })
-        } catch {
-          // Не можем декодировать — оставляем data={}; событие всё равно публикуем
+        } catch (err) {
+          // Не можем декодировать — логируем и оставляем data={}; событие всё равно публикуем
+          console.error(
+            `[BlockProcessor] Failed to decode ${trace.account}::${trace.name} at block ${blockNum}:`,
+            err instanceof Error ? err.message : String(err),
+            `abiJsonLen=${abiJson.length}, actRawLen=${trace.actRaw.length}`,
+          )
           data = {}
         }
+      } else {
+        console.error(
+          `[BlockProcessor] Empty actRaw for ${trace.account}::${trace.name} at block ${blockNum}`,
+        )
       }
 
       // Runtime ABI update: eosio::setabi содержит новый ABI в поле 'abi' (hex-encoded)
