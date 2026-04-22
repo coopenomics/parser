@@ -135,7 +135,13 @@ export class Parser {
   }
 
   private eventToFields(event: ParserEvent): Record<string, string> {
-    return { data: JSON.stringify(event) }
+    // BigInt нельзя передать в JSON.stringify без replacer'а —
+    // сериализуем как string; ParserClient при чтении делает обратную конверсию.
+    return {
+      data: JSON.stringify(event, (_k, v) =>
+        typeof v === 'bigint' ? v.toString() : v,
+      ),
+    }
   }
 
   async stop(): Promise<void> {
