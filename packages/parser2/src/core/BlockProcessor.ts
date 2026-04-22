@@ -44,15 +44,17 @@ interface BlockProcessorOptions {
 }
 
 /**
- * Конвертирует сырые байты ABI в JSON-строку для передачи в worker.
+ * Конвертирует сырые байты ABI в канонический JSON-формат для передачи в worker.
  * wharfkit ABI.from() умеет парсить base64-encoded raw bytes через AntelopeBlob.
- * При ошибке (например некорректный ABI) возвращает '{}' — worker просто вернёт пустой объект.
+ * .toJSON() возвращает стандартную ABI-схему с structs/actions/tables —
+ * именно она нужна worker'у для повторного ABI.from() и Serializer.decode().
+ * При ошибке возвращает '{}' — worker просто вернёт пустой объект.
  */
 function abiToJson(bytes: Uint8Array): string {
   try {
     const base64 = Buffer.from(bytes).toString('base64')
     const abi = ABI.from(AntelopeBlob.from(base64))
-    return JSON.stringify(abi)
+    return JSON.stringify(abi.toJSON())
   } catch {
     return '{}'
   }
