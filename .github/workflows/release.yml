@@ -71,19 +71,18 @@ jobs:
           pnpm --filter @coopenomics/coopos-ship-reader build
           pnpm --filter @coopenomics/parser2 build
 
-      # Настраиваем npm auth для lerna/pnpm: NODE_AUTH_TOKEN из setup-node
-      # уже прописывает _authToken в .npmrc, но lerna внутри читает из npm cli,
-      # поэтому дублируем через env NPM_TOKEN → npm_config_//registry.npmjs.org/:_authToken.
-      # npm trusted publishing: OIDC через id-token: write, без NPM_TOKEN.
-      # Настраивается на стороне npm: packages/coopenomics-parser2/settings/access
-      # → Trusted Publisher → GitHub Actions (repo=coopenomics/parser,
-      # workflow=.github/workflows/release.yml, environment="").
-      # Provenance включён — sigstore подпишет каждый publish.
+      # Первый publish @coopenomics/parser2 идёт через классический NPM_TOKEN —
+      # OIDC trusted publishing требует предварительно настроенного publisher на стороне
+      # npm, а настроить его можно только для уже существующего пакета. После того как
+      # @coopenomics/parser2 создастся и под него будет добавлен Trusted Publisher,
+      # NODE_AUTH_TOKEN и NPM_CONFIG_PROVENANCE=false можно убрать и вернуть
+      # provenance=true → снова OIDC.
       - name: Publish via Lerna (from-package)
         if: steps.ver.outputs.released == 'true'
         run: pnpm exec lerna publish from-package --yes --no-private
         env:
-          NPM_CONFIG_PROVENANCE: true
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag release
