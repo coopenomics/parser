@@ -14,7 +14,7 @@ Minimal example: Parser (SHiP → Redis indexer) and ParserClient (consumer) run
 **Step 1 — Clone and install**
 
 ```bash
-git clone https://github.com/coopenomics/parser.git
+git clone https://github.com/coopenomics/parser2.git
 cd parser
 pnpm install
 ```

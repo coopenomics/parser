@@ -2,7 +2,7 @@
 
 Универсальный индексер блокчейнов EOSIO / Antelope: читает блоки из State History Plugin (SHiP) по WebSocket, декодирует actions и дельты таблиц с учётом исторических ABI, публикует унифицированный поток событий в Redis Stream. Потребители получают события через `ParserClient` с single-active-consumer lock'ом, recovery после сбоев и dead-letter для poison-messages.
 
-[![CI](https://github.com/coopenomics/parser/actions/workflows/ci.yml/badge.svg)](https://github.com/coopenomics/parser/actions/workflows/ci.yml)
+[![CI](https://github.com/coopenomics/parser2/actions/workflows/ci.yml/badge.svg)](https://github.com/coopenomics/parser2/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@coopenomics/parser2.svg)](https://www.npmjs.com/package/@coopenomics/parser2)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
