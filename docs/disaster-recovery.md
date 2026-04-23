@@ -1,12 +1,12 @@
 # Disaster Recovery Runbook
 
-This document covers recovery procedures for common failure scenarios involving `@coopenomics/parser`.
+This document covers recovery procedures for common failure scenarios involving `@coopenomics/parser2`.
 
 ---
 
 ## Scenario 1 — Redis data loss (RDB/AOF corruption or total loss)
 
-**Symptoms:** Parser starts but emits no events; `redis-cli HGET parser:sync:<chainId> block_num` returns nil.
+**Symptoms:** Parser starts but emits no events; `redis-cli HGET parser2:sync:<chainId> block_num` returns nil.
 
 **Impact:** The sync checkpoint is lost. The parser will restart from block 0 (or the last known position in config). Consumers will re-process old events — their handlers must be idempotent.
 
@@ -19,7 +19,7 @@ This document covers recovery procedures for common failure scenarios involving 
 
 2. **Decide start block.** If you know the last safely processed block, set it manually:
    ```bash
-   redis-cli HSET parser:sync:<chainId> block_num <N> block_id <ID> last_updated $(date -u +%FT%TZ)
+   redis-cli HSET parser2:sync:<chainId> block_num <N> block_id <ID> last_updated $(date -u +%FT%TZ)
    ```
    If unknown, leave empty and the parser will replay from 0.
 
@@ -30,7 +30,7 @@ This document covers recovery procedures for common failure scenarios involving 
 
 4. **Restart the parser.**
 
-5. **Monitor lag** via `/health` endpoint or `parser_indexing_lag_seconds` Prometheus metric.
+5. **Monitor lag** via `/health` endpoint or `parser2_indexing_lag_seconds` Prometheus metric.
 
 ---
 
@@ -48,7 +48,7 @@ Simply restart the parser. The sync hash guarantees replay from the last complet
 
 ## Scenario 3 — Consumer handler failures → dead-letter accumulation
 
-**Symptoms:** `ce:parser:<chainId>:dead:<subId>` stream grows; `parser_client_dead_letters_total` counter rising.
+**Symptoms:** `ce:parser2:<chainId>:dead:<subId>` stream grows; `parser2_client_dead_letters_total` counter rising.
 
 ### Recovery steps
 
@@ -128,6 +128,6 @@ The parser will automatically re-fetch the ABI from the chain RPC on the next bl
 |---|---|
 | Parser lag | `curl http://localhost:9090/health` |
 | Prometheus metrics | `curl http://localhost:9090/metrics` |
-| Stream length | `redis-cli XLEN ce:parser:<chainId>:events` |
-| Sync position | `redis-cli HGETALL parser:sync:<chainId>` |
+| Stream length | `redis-cli XLEN ce:parser2:<chainId>:events` |
+| Sync position | `redis-cli HGETALL parser2:sync:<chainId>` |
 | Dead letters | `parser list-dead-letters --chain <chainId> --all` |

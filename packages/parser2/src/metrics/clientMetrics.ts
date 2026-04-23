@@ -55,9 +55,9 @@ export interface ClientMetrics {
 /**
  * Создаёт набор клиентских метрик в изолированном Registry.
  *
- * @param prefix — префикс имён метрик. По умолчанию 'parser_client'.
+ * @param prefix — префикс имён метрик. По умолчанию 'parser2_client'.
  */
-export function createClientMetrics(prefix = 'parser_client'): ClientMetrics {
+export function createClientMetrics(prefix = 'parser2_client'): ClientMetrics {
   const registry = new Registry()
 
   const handlerErrorsTotal = new Counter<'sub_id' | 'kind'>({

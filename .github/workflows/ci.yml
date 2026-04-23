@@ -36,7 +36,7 @@ jobs:
         with: { node-version: '20', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @coopenomics/coopos-ship-reader build
-      - run: pnpm --filter @coopenomics/parser typecheck
+      - run: pnpm --filter @coopenomics/parser2 typecheck
 
   unit:
     name: Unit tests
@@ -50,7 +50,7 @@ jobs:
         with: { node-version: '20', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @coopenomics/coopos-ship-reader build
-      - run: pnpm --filter @coopenomics/parser test:unit -- --reporter=verbose --coverage
+      - run: pnpm --filter @coopenomics/parser2 test:unit -- --reporter=verbose --coverage
       - uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -79,7 +79,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @coopenomics/coopos-ship-reader build
       # Parser2 build: нужен dist/deserialize.worker.cjs для Piscina worker pool
-      - run: pnpm --filter @coopenomics/parser build
+      - run: pnpm --filter @coopenomics/parser2 build
       # Запускаем nodeos вручную через docker run: образ dicoop/blockchain:v5.1.0-dev
       # не имеет CMD по умолчанию, и GitHub Actions services: не поддерживает
       # передачу команды контейнеру. Монтируем config.ini (SHiP на 8080) и genesis.json.
@@ -87,7 +87,7 @@ jobs:
         run: |
           docker run -d --name blockchain \
             -p 8888:8888 -p 8080:8080 -p 9876:9876 \
-            -v "${GITHUB_WORKSPACE}/packages/parser/test/integration/node-config:/mnt/dev/config" \
+            -v "${GITHUB_WORKSPACE}/packages/parser2/test/integration/node-config:/mnt/dev/config" \
             dicoop/blockchain:v5.1.0-dev \
             /bin/bash -c '/usr/local/bin/nodeos -d /mnt/dev/data -p eosio --config-dir /mnt/dev/config --genesis-json /mnt/dev/config/genesis.json --disable-replay-opts'
           sleep 3
@@ -104,7 +104,7 @@ jobs:
           echo "ERROR: Chain API did not become ready. Container logs:"
           docker logs blockchain | tail -100
           exit 1
-      - run: pnpm --filter @coopenomics/parser test:integration
+      - run: pnpm --filter @coopenomics/parser2 test:integration
         env:
           REDIS_URL: redis://localhost:6379
           CHAIN_URL: http://localhost:8888
@@ -125,4 +125,4 @@ jobs:
         with: { node-version: '20', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @coopenomics/coopos-ship-reader build
-      - run: pnpm --filter @coopenomics/parser build
+      - run: pnpm --filter @coopenomics/parser2 build

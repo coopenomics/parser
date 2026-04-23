@@ -85,7 +85,7 @@ export class WorkerPool {
 
   /**
    * Доля занятых потоков от общего числа (0..1).
-   * Полезно для метрики parser_worker_pool_queue_depth.
+   * Полезно для метрики parser2_worker_pool_queue_depth.
    */
   get utilization(): number {
     return this.pool.utilization

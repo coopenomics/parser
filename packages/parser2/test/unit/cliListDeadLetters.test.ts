@@ -116,7 +116,7 @@ describe('listDeadLetters — --all flag', () => {
   })
 
   it('calls scan with correct pattern for --all', async () => {
-    const redis = makeRedis({ scanResult: ['ce:parser:mainnet:dead:sub1'] })
+    const redis = makeRedis({ scanResult: ['ce:parser2:mainnet:dead:sub1'] })
     vi.spyOn(redis, 'xlen').mockResolvedValue(0)
     vi.spyOn(redis, 'xrange').mockResolvedValue([])
     const spy = vi.spyOn(console, 'log').mockImplementation(() => undefined)

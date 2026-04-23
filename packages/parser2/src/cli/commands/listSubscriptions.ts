@@ -4,10 +4,10 @@
  * Показывает зарегистрированные подписки и их текущее состояние в consumer group.
  *
  * Источник данных — два ключа Redis:
- *   1. parser:subs — HASH: subId → JSON с метаданными подписки (filters, startFrom, registeredAt).
+ *   1. parser2:subs — HASH: subId → JSON с метаданными подписки (filters, startFrom, registeredAt).
  *      Записывается при вызове ParserClient.subscribe(), сохраняется между перезапусками.
  *
- *   2. ce:parser:<chainId>:events — Redis Stream с consumer groups.
+ *   2. ce:parser2:<chainId>:events — Redis Stream с consumer groups.
  *      XINFO GROUPS даёт для каждой группы: pending count, lag, last-delivered-id.
  *      Если стрим ещё не создан (парсер не запускался) — xinfoGroups выбросит ошибку;
  *      мы перехватываем её и показываем все подписки как «not started».
@@ -26,7 +26,7 @@ import type { RedisStore } from '../../ports/RedisStore.js'
 import { RedisKeys } from '../../redis/keys.js'
 
 /**
- * Метаданные подписки, хранимые в Redis HASH parser:subs.
+ * Метаданные подписки, хранимые в Redis HASH parser2:subs.
  * Сохраняются при registerSubscription() и используются для восстановления после рестарта.
  */
 interface SubMeta {
@@ -81,7 +81,7 @@ function formatFilters(filters: Array<Record<string, string>>): string {
  * Основная функция команды list-subscriptions.
  *
  * Алгоритм:
- *   1. HGETALL parser:subs → все зарегистрированные подписки.
+ *   1. HGETALL parser2:subs → все зарегистрированные подписки.
  *   2. XINFO GROUPS <stream> → runtime-статистика consumer groups (может упасть если стрим не создан).
  *   3. JOIN по subId: дополняем каждую подписку данными из consumer group.
  *   4. Вывод: JSON-массив или ASCII-таблица с выравниванием.

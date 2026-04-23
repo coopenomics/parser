@@ -22,7 +22,7 @@ pnpm install
 **Step 2 — Build the package**
 
 ```bash
-pnpm --filter @coopenomics/parser build
+pnpm --filter @coopenomics/parser2 build
 ```
 
 **Step 3 — Configure**

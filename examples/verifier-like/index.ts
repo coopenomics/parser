@@ -8,8 +8,8 @@
  * See README.md for the 5-step startup guide.
  */
 
-import { Parser, ParserClient } from '@coopenomics/parser'
-import type { NativeDeltaEvent, NativePermissionRow } from '@coopenomics/parser'
+import { Parser, ParserClient } from '@coopenomics/parser2'
+import type { NativeDeltaEvent, NativePermissionRow } from '@coopenomics/parser2'
 
 // ── Configuration ────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 name: Release
 
 # Запускается при каждом push в main (обычно — merge PR из dev).
-# Если версия в packages/parser/package.json изменилась (не совпадает с
+# Если версия в packages/parser2/package.json изменилась (не совпадает с
 # существующим git-тегом v<version>) — тогда:
 #   1. Публикуем workspace-пакеты в npm
 #   2. Создаём git-тег v<version> и пушим его
@@ -50,12 +50,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Читаем версию из packages/parser/package.json и проверяем
+      # Читаем версию из packages/parser2/package.json и проверяем
       # что тега v<version> ещё не существует.
       - name: Check version change
         id: ver
         run: |
-          VERSION=$(node -p "require('./packages/parser/package.json').version")
+          VERSION=$(node -p "require('./packages/parser2/package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           if git rev-parse "v$VERSION" >/dev/null 2>&1; then
             echo "Tag v$VERSION already exists — nothing to release"
@@ -69,13 +69,13 @@ jobs:
         if: steps.ver.outputs.released == 'true'
         run: |
           pnpm --filter @coopenomics/coopos-ship-reader build
-          pnpm --filter @coopenomics/parser build
+          pnpm --filter @coopenomics/parser2 build
 
       # Настраиваем npm auth для lerna/pnpm: NODE_AUTH_TOKEN из setup-node
       # уже прописывает _authToken в .npmrc, но lerna внутри читает из npm cli,
       # поэтому дублируем через env NPM_TOKEN → npm_config_//registry.npmjs.org/:_authToken.
       # npm trusted publishing: OIDC через id-token: write, без NPM_TOKEN.
-      # Настраивается на стороне npm: packages/coopenomics-parser/settings/access
+      # Настраивается на стороне npm: packages/coopenomics-parser2/settings/access
       # → Trusted Publisher → GitHub Actions (repo=coopenomics/parser,
       # workflow=.github/workflows/release.yml, environment="").
       # Provenance включён — sigstore подпишет каждый publish.
@@ -115,7 +115,7 @@ jobs:
         with: { node-version: '20', cache: 'pnpm' }
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @coopenomics/coopos-ship-reader build
-      - run: pnpm --filter @coopenomics/parser build
+      - run: pnpm --filter @coopenomics/parser2 build
 
       - uses: docker/setup-buildx-action@v3
       # Docker Hub auth: требует secrets DOCKERHUB_USERNAME + DOCKERHUB_TOKEN
@@ -128,7 +128,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: dicoop/parser
+          images: dicoop/parser2
           tags: |
             type=semver,pattern={{version}},value=v${{ needs.release.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=v${{ needs.release.outputs.version }}

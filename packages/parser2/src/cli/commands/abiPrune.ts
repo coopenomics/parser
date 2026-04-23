@@ -60,7 +60,7 @@ async function pruneContract(
  * @param contract — имя контракта (null если allContracts=true).
  * @param olderThan — block_num: удалить версии с block_num < olderThan.
  * @param dryRun — только показать, не удалять.
- * @param allContracts — обработать все контракты в Redis (SCAN parser:abi:*).
+ * @param allContracts — обработать все контракты в Redis (SCAN parser2:abi:*).
  */
 export async function abiPrune(
   redis: RedisStore,
@@ -75,7 +75,7 @@ export async function abiPrune(
 
   if (allContracts) {
     // SCAN по паттерну: находим все ABI-ключи во всех контрактах
-    const keys = await redis.scan('parser:abi:*')
+    const keys = await redis.scan('parser2:abi:*')
     if (keys.length === 0) {
       console.log('No ABI history found.')
       return
@@ -83,7 +83,7 @@ export async function abiPrune(
 
     const rows: Array<{ contract: string; pruned: number; remaining: number }> = []
     for (const key of keys) {
-      const name = key.replace(/^parser:abi:/, '')
+      const name = key.replace(/^parser2:abi:/, '')
       try {
         const result = await pruneContract(redis, name, olderThan, dryRun)
         rows.push({ contract: name, pruned: dryRun ? result.remaining : result.pruned, remaining: result.remaining })

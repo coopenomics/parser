@@ -7,7 +7,7 @@
     "start": "tsx index.ts"
   },
   "dependencies": {
-    "@coopenomics/parser": "workspace:*"
+    "@coopenomics/parser2": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.15.0"

@@ -181,7 +181,7 @@ export class Parser {
   private async checkRedisPersistence(): Promise<void> {
     const redis = this.redis!
     try {
-      const aofResult = await redis.hget('__parser_check__', '__noop__')
+      const aofResult = await redis.hget('__parser2_check__', '__noop__')
       void aofResult
     } catch {
       // non-fatal check failure
